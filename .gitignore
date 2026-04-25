@@ -1,0 +1,26 @@
+# Virtual environments
+venv*/
+*/venv*/
+*/venv
+venv
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+nohup.out
+
+# Parquet and heavy data
+*.parquet
+.parquet
+parquet/
+
+# State files (DO NOT UPLOAD)
+state_*.json
+*_state.json
+*.json
+
+# System files
+.DS_Store
