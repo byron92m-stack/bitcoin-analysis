@@ -25,8 +25,8 @@ from http.client import RemoteDisconnected
 # CONFIG
 # ============================================================
 
-RPC_USER = "bitcoinrpc"
-RPC_PASSWORD = "superseguro123"
+RPC_USER = ""
+RPC_PASSWORD = ""
 RPC_URL = "http://127.0.0.1:8332"
 
 PROJECT_ROOT = "/run/media/linux/SSD4T/btc-etl"
