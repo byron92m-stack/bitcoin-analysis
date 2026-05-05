@@ -2,6 +2,7 @@
 # ============================================================
 # BTC ETL — CAPA 1 (Bitcoin Core → Parquet)
 # UTXO-safe, compact, reproducible
+# Rutas corregidas para /media/SSD4T
 # ============================================================
 
 import os
@@ -25,11 +26,11 @@ from http.client import RemoteDisconnected
 # CONFIG
 # ============================================================
 
-RPC_USER = ""
-RPC_PASSWORD = ""
+RPC_USER = "bitcoinrpc"
+RPC_PASSWORD = "superseguro123"
 RPC_URL = "http://127.0.0.1:8332"
 
-PROJECT_ROOT = "/run/media/linux/SSD4T/btc-etl"
+PROJECT_ROOT = "/media/SSD4T/btc-etl"
 PARQUET_ROOT = os.path.join(PROJECT_ROOT, "parquet")
 FAST_BASE = os.path.join(PARQUET_ROOT, "capa1_btccore_parquet")
 

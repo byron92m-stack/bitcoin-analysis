@@ -30,7 +30,7 @@ from tqdm import tqdm
 # CONFIG (RUTAS ACTUALIZADAS SSD4T)
 # ============================================================
 
-PROJECT_ROOT = "/run/media/linux/SSD4T/btc-etl"
+PROJECT_ROOT = "/media/SSD4T/btc-etl"
 
 CAPA1_DIR = os.path.join(PROJECT_ROOT, "parquet", "capa1_btccore_parquet")
 CAPA2_DIR = os.path.join(PROJECT_ROOT, "parquet", "capa2_utxo_parquet")
