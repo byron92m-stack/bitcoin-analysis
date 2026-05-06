@@ -7,7 +7,7 @@ Full ETL pipeline and OLAP analysis of Bitcoin's UTXO system, fee dynamics, and 
 Phase 1 - UTXO Analysis: Value distribution, age cohorts, script evolution. Done.
 Phase 2 - Fees Over Time: Daily fees, moving averages, halving impact. Done.
 Phase 3 - Momentum Signal: Fee Z-Score, price divergence, regime detection. Done.
-Phase 4 - Mempool Heatmap Dashboard. Pending.
+Phase 4 - Mempool Heatmap Dashboard. Done.
 Phase 5 - LightGBM Fees Prediction Model. Pending.
 Phase 6 - Entity Clustering. Pending.
 Phase 7 - Apache Superset Unified Dashboard. Pending.
@@ -98,9 +98,47 @@ Actionable thresholds: Z > +2 exhaustion (sell), Z < -2 accumulation (buy), Z be
 ![Momentum Z-Score](notebooks/images/momentum_fee_zscore.png)
 ![Momentum Divergence](notebooks/images/momentum_divergence.png)
 
+## Phase 4 - Mempool Heatmap Dashboard
+
+Notebook: notebooks/04_mempool_heatmap.ipynb
+
+Fee congestion heatmap using on-chain confirmed fees as mempool proxy. Analyzes fee patterns by hour of day and day of week across 4 market regimes.
+
+Key metrics: 472,563 blocks analyzed across 4 market cycles. Top slot: Friday 11:00 UTC (0.56 BTC avg fees). Cheapest: Sunday 00:00-06:00 UTC (0.27 BTC avg). Weekend savings: approximately 50% vs weekday peak.
+
+Top 10 most congested time slots:
+
+1. Fri 11:00 UTC - 0.56 BTC avg (2,911 blocks, 2,567 avg tx)
+
+2. Fri 12:00 UTC - 0.55 BTC avg (2,771 blocks, 2,609 avg tx)
+
+3. Thu 08:00 UTC - 0.55 BTC avg (2,743 blocks, 2,471 avg tx)
+
+4. Fri 10:00 UTC - 0.54 BTC avg (2,813 blocks, 2,687 avg tx)
+
+5. Fri 08:00 UTC - 0.54 BTC avg (2,772 blocks, 2,391 avg tx)
+
+6. Thu 12:00 UTC - 0.54 BTC avg (2,814 blocks, 2,618 avg tx)
+
+7. Thu 11:00 UTC - 0.53 BTC avg (2,823 blocks, 2,588 avg tx)
+
+8. Thu 10:00 UTC - 0.53 BTC avg (2,702 blocks, 2,636 avg tx)
+
+9. Wed 08:00 UTC - 0.53 BTC avg (2,659 blocks, 2,485 avg tx)
+
+10. Fri 09:00 UTC - 0.53 BTC avg (2,751 blocks, 2,502 avg tx)
+
+Key findings: Thursday-Friday dominate congestion (8 of top 10 slots). European morning/US open (08:00-12:00 UTC) consistently highest fees. Sunday is cheapest day. 2017-2018 shows extreme spikes while 2022-2023 shows compressed low fees. 2024-2026 elevated from Ordinals/Runes.
+
+Trading insight: Cheapest window is Sunday 00:00-06:00 UTC. Most expensive is Thursday-Friday 08:00-12:00 UTC.
+
+![Heatmap Full](notebooks/images/mempool_heatmap_full.png)
+
+![Heatmap Regimes](notebooks/images/mempool_heatmap_regimes.png)
+
 ## Repository Structure
 
-btc-etl/ with etl/ (4 Python scripts), notebooks/ (3 Jupyter notebooks + images/ with 10 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
+btc-etl/ with etl/ (4 Python scripts), notebooks/ (4 Jupyter notebooks + images/ with 12 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
 
 ## Quick Start
 
