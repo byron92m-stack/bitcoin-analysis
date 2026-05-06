@@ -1,129 +1,102 @@
 # Bitcoin On-Chain Analytics (2017-2026)
 
-Full ETL pipeline and OLAP analysis of Bitcoin's UTXO system and fee dynamics during the modern exchange era. Built with Bitcoin Core, Parquet, ClickHouse, and Python/JupyterLab.
+Full ETL pipeline and OLAP analysis of Bitcoin's UTXO system, fee dynamics, and quantitative momentum signals during the modern exchange era. Built with Bitcoin Core, Parquet, ClickHouse, and Python/JupyterLab.
 
 ## Phases
 
 Phase 1 - UTXO Analysis: Value distribution, age cohorts, script evolution. Done.
 Phase 2 - Fees Over Time: Daily fees, moving averages, halving impact. Done.
-Phase 3 - Quantitative Momentum Signal. Pending.
+Phase 3 - Momentum Signal: Fee Z-Score, price divergence, regime detection. Done.
 Phase 4 - Mempool Heatmap Dashboard. Pending.
-Phase 5 - Fees Prediction Model. Pending.
+Phase 5 - LightGBM Fees Prediction Model. Pending.
 Phase 6 - Entity Clustering. Pending.
+Phase 7 - Apache Superset Unified Dashboard. Pending.
+Phase 8 - LightGBM Trading Bot. Pending.
 
 ## System Architecture
 
-Three-layer ETL pipeline with zero data duplication. Bitcoin Core with txindex=1 serves as source of truth. Data flows through three Parquet layers, each building on the previous. ClickHouse reads Parquet files directly via File engine — no import step, no data duplication, no extra storage.
+Four-layer ETL pipeline with zero data duplication. Bitcoin Core with txindex=1 serves as source of truth. ClickHouse reads Parquet files directly via File engine. No import step, no data duplication, no extra storage.
 
-Layer 1 (capa1_btccore_parquet): Raw blockchain data extracted via RPC — blocks, transactions, inputs, outputs. Partitioned by block height in 250-block batches.
+Layer 1 (capa1_btccore_parquet): Raw blockchain data via RPC — blocks, transactions, inputs, outputs. Partitioned by block height in 250-block batches.
 
-Layer 2 (capa2_utxo_parquet): Normalized UTXO events. Every output becomes a create event, every input becomes a spend event. Fields include event_type, height, txid, outpoint, value_sats, scriptPubKey_type, spent_by.
+Layer 2 (capa2_utxo_parquet): Normalized UTXO events. Every output becomes a create event, every input becomes a spend event.
 
-Layer 3 (capa3_block_metrics): Pre-computed block-level metrics. Each block gets its subsidy (halving-aware) and total fees calculated from coinbase outputs. Eliminates expensive JOINs at query time.
+Layer 3 (capa3_block_metrics): Pre-computed block-level metrics. Fees calculated as coinbase outputs minus block subsidy. Eliminates expensive JOINs.
 
-Stack: Bitcoin Core RPC to Python ETL to Parquet (zstd) to ClickHouse File Engine to JupyterLab (pandas, matplotlib).
+Layer 4 (capa4_binance): BTC/USDT price data from Binance API. 1-minute and 1-day candles with derived metrics (returns, volatility, VWAP).
 
-Design decisions: 250 blocks per Parquet file for optimal I/O. zstd compression level 6. State JSON files enable pause/resume without duplication. Menu-driven ETL with reset, continue, and rollback options. ClickHouse reads Parquet directly from user_files symlinks. No data duplication between Parquet and ClickHouse.
+Stack: Bitcoin Core RPC + Binance API to Python ETL to Parquet (zstd) to ClickHouse File Engine to JupyterLab (pandas, matplotlib).
+
+Design decisions: 250 units per batch. zstd compression level 6. State JSON files for pause/resume. Menu-driven ETL (1=reset, 2=continue, 3=rollback). ClickHouse reads Parquet from user_files symlinks. Zero data duplication.
 
 ## ETL Pipeline
 
-Scripts:
+etl/capa1_btccore_parquet.py — Extracts on-chain data from Bitcoin Core RPC. 948,312 blocks processed (heights 0 to 948,069).
 
-etl/capa1_btccore_parquet.py — Extracts blocks, txs, inputs, outputs from Bitcoin Core RPC. Writes to parquet/capa1_btccore_parquet/. State file: state_capa1_btccore_parquet.json.
+etl/capa2_utxo_parquet.py — Normalizes UTXO create/spend events from Capa 1. 7.08 billion events.
 
-etl/capa2_utxo_parquet.py — Reads Capa 1 inputs and outputs, normalizes into UTXO create/spend events. Writes to parquet/capa2_utxo_parquet/utxo_events/. State file: state_capa2_utxo_parquet.json.
+etl/capa3_block_metrics.py — Calculates fees and subsidy per block. 301,789 BTC total fees identified.
 
-etl/capa3_block_metrics.py — Reads Capa 1 blocks, inputs, and outputs. Calculates fees per block as coinbase outputs minus block subsidy. Writes to parquet/capa3_block_metrics/blocks/. State file: state_capa3_block_metrics.json.
+etl/capa4_binance.py — Downloads BTC/USDT from Binance API. 4.58M 1m candles, 3,185 daily candles.
 
-Features: Automatic retries with exponential backoff. Reorg detection and safe rollback. Batch RPC calls with dynamic chunk sizing. Prefetch caching for reduced latency. tqdm progress bars. 948,312 blocks processed from height 0 to 948,069.
+Features: Automatic retries with exponential backoff. Reorg detection and safe rollback. tqdm progress bars. State machine architecture.
 
 ## Phase 1 - UTXO Analysis
 
 Notebook: notebooks/01_exploracion_utxo.ipynb
 
-Comprehensive quantitative analysis of Bitcoin's UTXO system structure. Examines value distribution, age cohort behavior, script type evolution, and outlier patterns across the modern era.
+Comprehensive UTXO system structure analysis. Value distribution, age cohort behavior, script type evolution, outlier patterns.
 
-Key findings:
+Key findings: Heavy-tail distribution spanning 10 orders of magnitude. 5-10 year cohorts hold majority supply. Zero correlation between value and age. Clear Legacy to SegWit to Taproot progression. Institutional consolidations visible in top 0.1% outliers.
 
-Heavy-Tail Distribution: UTXO values exhibit extreme skewness spanning 10 orders of magnitude. Small medians with very long tails, consistent with decentralized systems where few entities hold disproportionate value.
-
-Age Cohorts: The majority of supply resides in UTXOs aged 5-10 years, followed by 2-5 years. Younger cohorts under 6 months contain small, high-velocity outputs. This reflects long-term holding behavior and historical consolidation waves.
-
-Zero Value-Age Correlation: value_sats and age_days show no meaningful correlation. Bitcoin does not exhibit value by age behavior. UTXO value is independent of its lifespan.
-
-Script Evolution: Clear technological progression from Legacy (P2PKH, P2SH) to SegWit (P2WPKH, P2WSH) to Taproot (v1). Legacy scripts persist mainly in older cohorts while SegWit dominates younger ones. Taproot appears in recent years.
-
-Institutional Consolidations: Top 0.1 percent of UTXOs show enormous values clustered at specific block heights. These correspond to exchange reorganizations, hot-to-cold migrations, and large batching operations.
-
-### Charts
-
-![Boxplot by Age](notebooks/images/boxplot_value_by_age.png)
-*Distribution of log10(value_sats) by age cohort. Heavy-tail across all cohorts.*
-
-![Correlation Heatmap](notebooks/images/heatmap_correlation.png)
-*Correlation matrix confirms zero correlation between value and age.*
-
-![Scatter Value vs Age](notebooks/images/scatter_value_vs_age.png)
-*log10(value_sats) vs age_days. Structural independence between value and holding time.*
-
-![KDE by Age](notebooks/images/kde_by_age_bucket.png)
-*Kernel density estimation by age cohort. Value distribution patterns across holding periods.*
-
-![Script vs Cohort](notebooks/images/pivot_script_vs_age.png)
-*Supply by script type and age cohort. SegWit to Taproot migration across time.*
+Charts: boxplot_value_by_age.png, heatmap_correlation.png, scatter_value_vs_age.png, kde_by_age_bucket.png, pivot_script_vs_age.png
 
 ## Phase 2 - Fees Over Time (Binance Era)
 
 Notebook: notebooks/02_fees_over_time.ipynb
 
-Temporal analysis of Bitcoin transaction fees during the modern exchange era. Period starts July 14, 2017 (Binance launch) through May 5, 2026.
+Temporal fee analysis from Binance launch (July 14, 2017) through May 2026. 3,218 days. 192,552 BTC total fees.
 
-Key metrics:
+Key metrics: Mean 59.84 BTC/day. Median 23.04 BTC/day. Max 1,369.48 BTC (Dec 22, 2017). Halving 2024: 861.14 BTC (#5 all-time).
 
-Period: July 14, 2017 to May 5, 2026. Days analyzed: 3,218. Total fees: 192,552 BTC. Mean daily fees: 59.84 BTC. Median daily fees: 23.04 BTC. Max daily fees: 1,369.48 BTC on December 22, 2017. Halving 2024 day fees: 861.14 BTC ranked number 5 all-time.
+Top 10 fee days: 9 of 10 during Dec 2017-Jan 2018 bull peak. April 20, 2024 halving breaks 2017 monopoly at #5.
 
-Top 10 fee days:
+Key findings: 2017 dominance with heavy-tail confirmed (mean 2.6x median). MA30 reveals 4-year cyclical patterns. Post-2024 fees structurally elevated.
 
-1. December 22, 2017 - 1,369.48 BTC (146 blocks) - 2017 bull peak
-2. December 21, 2017 - 1,233.58 BTC (137 blocks) - 2017 bull peak
-3. December 23, 2017 - 1,068.56 BTC (146 blocks) - 2017 bull peak
-4. December 20, 2017 - 962.49 BTC (136 blocks) - 2017 bull peak
-5. April 20, 2024 - 861.14 BTC (134 blocks) - Halving day
-6. December 29, 2017 - 807.73 BTC (161 blocks) - 2017 bull peak
-7. December 24, 2017 - 794.93 BTC (150 blocks) - 2017 bull peak
-8. December 27, 2017 - 792.13 BTC (156 blocks) - 2017 bull peak
-9. January 3, 2018 - 771.30 BTC (160 blocks) - 2017 bull peak
-10. December 28, 2017 - 756.42 BTC (149 blocks) - 2017 bull peak
+Charts: fees_over_time_binance_era.png, fees_binance_era_linear.png, fees_last_2_years_binance_era.png
 
-Key findings:
+## Phase 3 - Quantitative Momentum Signal
 
-2017 Dominance: 9 of the top 10 highest-fee days occurred during the December 2017 to January 2018 bull market peak, when Bitcoin first reached twenty thousand dollars.
+Notebook: notebooks/03_momentum_signal.ipynb
 
-Halving 2024 Impact: April 20, 2024 halving day generated 861.14 BTC in fees, ranking number 5 all-time and breaking the 2017 monopoly on top fee days. Halving day fee premium driven by speculative activity and block space competition.
+Z-Score based momentum signal using on-chain fees and BTC price. 30-day rolling window with MA7 smoothing. Regime classification: elevated, normal, depressed.
 
-Heavy-Tail Confirmed: Mean daily fees of 59.84 BTC is 2.6 times the median of 23.04 BTC, confirming fee spikes dominate cumulative totals. A small number of extreme-fee days account for disproportionate share of total fees.
+Key metrics: 148 elevated streaks detected across 3,185 days. Signal threshold at Z > 1.5 for elevated, Z < -1.5 for depressed.
 
-Cyclical Pattern: MA30 smoothing reveals clear 4-year market cycles aligned with Bitcoin halving epochs. Fee peaks correspond to bull market tops in 2017, 2021, and 2025.
+Top 10 strongest signals:
+1. Apr 10, 2026 — Z=5.29 (post-halving 2026)
+2. Aug 22, 2024 — Z=5.28 (summer fee spike)
+3. Jun 7, 2024 — Z=5.16 (post-halving demand)
+4. Jun 19, 2018 — Z=5.06 (bear market bounce)
+5. Feb 23, 2025 — Z=4.94 (correction low)
+6. Apr 19, 2024 — Z=4.87 (halving eve)
+7. May 7, 2023 — Z=4.72 (Ordinals peak)
+8. Apr 24, 2018 — Z=4.68 (bear rally)
+9. Apr 11, 2026 — Z=4.64 (halving 2026)
+10. Apr 30, 2020 — Z=4.64 (pre-halving 2020)
 
-Post-Halving Elevation: Fees in 2024-2026 remain structurally higher than the 2022-2023 bear market, suggesting increased demand for block space from Ordinals, Runes, and Layer 2 settlement.
+Key findings: All 3 halvings detected with Z > 4.5. Longest streak: 14 days during Ordinals 2023. Fee/Price divergence identifies demand-leading vs speculation-leading regimes.
 
-### Charts
+Actionable thresholds: Z > +2 exhaustion (sell), Z < -2 accumulation (buy), Z between -1.5 and +1.5 normal (hold).
 
-![Fees Log Scale](notebooks/images/fees_over_time_binance_era.png)
-*Full Binance Era on log scale. Daily fees (orange bars), 7-day MA (blue), 30-day MA (orange line). Red dashed lines at 2020 and 2024 halvings.*
-
-![Fees Linear Scale](notebooks/images/fees_binance_era_linear.png)
-*Same data on linear scale. 2017 spike magnitude dwarfs all subsequent fee events.*
-
-![Fees Last 2 Years](notebooks/images/fees_last_2_years_binance_era.png)
-*Zoomed view May 2024 to May 2026. Post-halving 2024 dynamics with halving day marker.*
+Charts: momentum_fee_zscore.png, momentum_divergence.png
 
 ## Repository Structure
 
-btc-etl contains etl directory with 3 Python scripts, notebooks directory with 2 Jupyter notebooks and images subdirectory containing 8 PNG files (5 from Phase 1, 3 from Phase 2), parquet directory with 3 capa subdirectories (gitignored), state JSON files (gitignored), logs directory (gitignored), config directory, venvetl and venvquant virtual environments, and README.md.
+btc-etl/ with etl/ (4 Python scripts), notebooks/ (3 Jupyter notebooks + images/ with 10 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
 
 ## Quick Start
 
-Start ClickHouse from /media/SSD4T/clickhouse. Run ETL scripts with venvetl environment using menu options 1 for reset, 2 for continue, or 3 for rollback. Launch JupyterLab with venvquant environment. ClickHouse tables are auto-created with File Parquet engine pointing to user_files symlinks.
+Start ClickHouse from /media/SSD4T/clickhouse. Run ETL scripts with venvetl (options 1/2/3). Launch JupyterLab with venvquant. ClickHouse tables use File(Parquet) engine via user_files/ symlinks.
 
-Built by Byron. Stack: Bitcoin Core to Python ETL to Parquet with zstd to ClickHouse File Engine to JupyterLab with pandas and matplotlib.
+Built by Byron. Stack: Bitcoin Core + Binance API to Python ETL to Parquet (zstd) to ClickHouse File Engine to JupyterLab (pandas, matplotlib).

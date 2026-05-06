@@ -33,8 +33,8 @@ LOG_FILE = os.path.join(LOG_DIR, "capa4_binance.log")
 
 SYMBOL = "BTCUSDT"
 INTERVAL = "1m"
-LIMIT = 250
-SLEEP_TIME = 0.3
+LIMIT = 1000
+SLEEP_TIME = 0.5
 
 # ============================================================
 # SCHEMA FIJO (tz-naive)
