@@ -8,7 +8,7 @@ Phase 1 - UTXO Analysis: Value distribution, age cohorts, script evolution. Done
 Phase 2 - Fees Over Time: Daily fees, moving averages, halving impact. Done.
 Phase 3 - Momentum Signal: Fee Z-Score, price divergence, regime detection. Done.
 Phase 4 - Mempool Heatmap Dashboard. Done.
-Phase 5 - LightGBM Fees Prediction Model. Pending.
+Phase 5 - LightGBM Fees Prediction Model. Done.
 Phase 6 - Entity Clustering. Pending.
 Phase 7 - Apache Superset Unified Dashboard. Pending.
 Phase 8 - LightGBM Trading Bot. Pending.
@@ -136,9 +136,35 @@ Trading insight: Cheapest window is Sunday 00:00-06:00 UTC. Most expensive is Th
 
 ![Heatmap Regimes](notebooks/images/mempool_heatmap_regimes.png)
 
+## Phase 5 - LightGBM Fee Prediction Model
+
+
+
+Notebook: notebooks/05_fees_model.ipynb
+
+
+
+Predicts next-day Bitcoin fees using LightGBM with 17 on-chain and market features. Log-transform strategy handles heavy-tail distribution. Two-tier approach: regression for normal days + Phase 3 Z-Score alert for extreme days.
+
+
+
+Model performance (5-fold CV, normal days <100 BTC): MAE 6.82 BTC, R2 0.626. Top features: day_of_week (531), fees_log (521), log_return (424), fees_zscore from Phase 3 (351). Mean residual -0.14 BTC (nearly unbiased).
+
+
+
+Key findings: Log transform improved R2 from -1.09 to 0.626. Day-of-week is #1 predictor, confirming Phase 4 heatmap. Phase 3 Z-Score validated as predictive feature (#6). Market features (log_return, volatility) add significant predictive power. Model ready for integration with Phase 8 trading bot.
+
+
+
+![Feature Importance](notebooks/images/feature_importance.png)
+
+![Predicted vs Actual](notebooks/images/predicted_vs_actual.png)
+
+![Residual Analysis](notebooks/images/residual_analysis.png)
+
 ## Repository Structure
 
-btc-etl/ with etl/ (4 Python scripts), notebooks/ (4 Jupyter notebooks + images/ with 12 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
+btc-etl/ with etl/ (4 Python scripts), notebooks/ (5 Jupyter notebooks + images/ with 15 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
 
 ## Quick Start
 
