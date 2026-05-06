@@ -9,7 +9,7 @@ Phase 2 - Fees Over Time: Daily fees, moving averages, halving impact. Done.
 Phase 3 - Momentum Signal: Fee Z-Score, price divergence, regime detection. Done.
 Phase 4 - Mempool Heatmap Dashboard. Done.
 Phase 5 - LightGBM Fees Prediction Model. Done.
-Phase 6 - Entity Clustering. Pending.
+Phase 6 - Entity Clustering. Done.
 Phase 7 - Apache Superset Unified Dashboard. Pending.
 Phase 8 - LightGBM Trading Bot. Pending.
 
@@ -162,12 +162,44 @@ Key findings: Log transform improved R2 from -1.09 to 0.626. Day-of-week is #1 p
 
 ![Residual Analysis](notebooks/images/residual_analysis.png)
 
+## Phase 6 - Entity Clustering (Market Regimes)
+
+
+
+Notebook: notebooks/06_entity_clustering.ipynb
+
+
+
+Unsupervised clustering of market regimes using HDBSCAN on 5 normalized features: log(fees), log(price), volatility, log_return, range_pct. 3,185 days analyzed.
+
+
+
+Results: HDBSCAN discovered 2 natural clusters + outliers without predefined rules. Cluster 0 (1,234 days): high-price regime, avg BTC $59,755, fees 20.56 BTC, Nov 2020-May 2026. Cluster 1 (534 days): low-price regime, avg BTC $7,995, fees 36.65 BTC, Nov 2017-Nov 2020. Outliers: 1,417 days (44.5%) — no normal state exists.
+
+
+
+Key findings: Algorithm found BTC $10K breakout (Nov 2020) as natural boundary between two eras. 44.5% days are outliers — Bitcoin has no normal state, validating Phase 3 Z-Score approach. Structural fee shift confirmed: modern era has 7.5x higher prices but 43% lower fees (SegWit + batching). PCA captures 62% variance in first 2 components.
+
+
+
+![Cluster PCA](notebooks/images/cluster_pca.png)
+
+![Cluster Timeseries](notebooks/images/cluster_timeseries.png)
+
+![Cluster Profiles](notebooks/images/cluster_profiles.png)
+
 ## Repository Structure
 
-btc-etl/ with etl/ (4 Python scripts), notebooks/ (5 Jupyter notebooks + images/ with 15 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
+btc-etl/ with etl/ (4 Python scripts), notebooks/ (6 Jupyter notebooks + images/ with 18 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
 
 ## Quick Start
 
 Start ClickHouse from /media/SSD4T/clickhouse. Run ETL scripts with venvetl (options 1/2/3). Launch JupyterLab with venvquant. ClickHouse tables use File(Parquet) engine via user_files/ symlinks.
 
 Built by Byron. Stack: Bitcoin Core + Binance API to Python ETL to Parquet (zstd) to ClickHouse File Engine to JupyterLab (pandas, matplotlib).
+
+## License
+
+MIT License — see [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2025-2026 Byron
