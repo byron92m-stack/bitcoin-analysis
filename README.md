@@ -55,7 +55,22 @@ Script Evolution: Clear technological progression from Legacy (P2PKH, P2SH) to S
 
 Institutional Consolidations: Top 0.1 percent of UTXOs show enormous values clustered at specific block heights. These correspond to exchange reorganizations, hot-to-cold migrations, and large batching operations.
 
-Visualizations: boxplot_value_by_age.png shows distribution of log10 value_sats by age cohort. heatmap_correlation.png confirms zero correlation between value and age. scatter_value_vs_age.png reveals structural independence. kde_by_age_bucket.png shows value distribution patterns across holding periods. pivot_script_vs_age.png shows SegWit to Taproot migration across time.
+### Charts
+
+![Boxplot by Age](notebooks/images/boxplot_value_by_age.png)
+*Distribution of log10(value_sats) by age cohort. Heavy-tail across all cohorts.*
+
+![Correlation Heatmap](notebooks/images/heatmap_correlation.png)
+*Correlation matrix confirms zero correlation between value and age.*
+
+![Scatter Value vs Age](notebooks/images/scatter_value_vs_age.png)
+*log10(value_sats) vs age_days. Structural independence between value and holding time.*
+
+![KDE by Age](notebooks/images/kde_by_age_bucket.png)
+*Kernel density estimation by age cohort. Value distribution patterns across holding periods.*
+
+![Script vs Cohort](notebooks/images/pivot_script_vs_age.png)
+*Supply by script type and age cohort. SegWit to Taproot migration across time.*
 
 ## Phase 2 - Fees Over Time (Binance Era)
 
@@ -92,7 +107,16 @@ Cyclical Pattern: MA30 smoothing reveals clear 4-year market cycles aligned with
 
 Post-Halving Elevation: Fees in 2024-2026 remain structurally higher than the 2022-2023 bear market, suggesting increased demand for block space from Ordinals, Runes, and Layer 2 settlement.
 
-Visualizations: fees_over_time_binance_era.png shows full Binance Era on log scale with daily fees as orange bars, 7-day MA in blue, 30-day MA in orange line, red dashed lines marking 2020 and 2024 halvings. fees_binance_era_linear.png shows same data on linear scale to highlight 2017 spike magnitude. fees_last_2_years_binance_era.png shows zoomed view of May 2024 to May 2026 with halving day marker.
+### Charts
+
+![Fees Log Scale](notebooks/images/fees_over_time_binance_era.png)
+*Full Binance Era on log scale. Daily fees (orange bars), 7-day MA (blue), 30-day MA (orange line). Red dashed lines at 2020 and 2024 halvings.*
+
+![Fees Linear Scale](notebooks/images/fees_binance_era_linear.png)
+*Same data on linear scale. 2017 spike magnitude dwarfs all subsequent fee events.*
+
+![Fees Last 2 Years](notebooks/images/fees_last_2_years_binance_era.png)
+*Zoomed view May 2024 to May 2026. Post-halving 2024 dynamics with halving day marker.*
 
 ## Repository Structure
 
