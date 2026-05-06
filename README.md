@@ -49,7 +49,11 @@ Comprehensive UTXO system structure analysis. Value distribution, age cohort beh
 
 Key findings: Heavy-tail distribution spanning 10 orders of magnitude. 5-10 year cohorts hold majority supply. Zero correlation between value and age. Clear Legacy to SegWit to Taproot progression. Institutional consolidations visible in top 0.1% outliers.
 
-Charts: boxplot_value_by_age.png, heatmap_correlation.png, scatter_value_vs_age.png, kde_by_age_bucket.png, pivot_script_vs_age.png
+![Boxplot by Age](notebooks/images/boxplot_value_by_age.png)
+![Correlation Heatmap](notebooks/images/heatmap_correlation.png)
+![Scatter Value vs Age](notebooks/images/scatter_value_vs_age.png)
+![KDE by Age](notebooks/images/kde_by_age_bucket.png)
+![Script vs Cohort](notebooks/images/pivot_script_vs_age.png)
 
 ## Phase 2 - Fees Over Time (Binance Era)
 
@@ -63,7 +67,9 @@ Top 10 fee days: 9 of 10 during Dec 2017-Jan 2018 bull peak. April 20, 2024 halv
 
 Key findings: 2017 dominance with heavy-tail confirmed (mean 2.6x median). MA30 reveals 4-year cyclical patterns. Post-2024 fees structurally elevated.
 
-Charts: fees_over_time_binance_era.png, fees_binance_era_linear.png, fees_last_2_years_binance_era.png
+![Fees Log Scale](notebooks/images/fees_over_time_binance_era.png)
+![Fees Linear Scale](notebooks/images/fees_binance_era_linear.png)
+![Fees Last 2 Years](notebooks/images/fees_last_2_years_binance_era.png)
 
 ## Phase 3 - Quantitative Momentum Signal
 
@@ -89,7 +95,8 @@ Key findings: All 3 halvings detected with Z > 4.5. Longest streak: 14 days duri
 
 Actionable thresholds: Z > +2 exhaustion (sell), Z < -2 accumulation (buy), Z between -1.5 and +1.5 normal (hold).
 
-Charts: momentum_fee_zscore.png, momentum_divergence.png
+![Momentum Z-Score](notebooks/images/momentum_fee_zscore.png)
+![Momentum Divergence](notebooks/images/momentum_divergence.png)
 
 ## Repository Structure
 
