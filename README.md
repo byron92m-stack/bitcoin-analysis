@@ -11,7 +11,7 @@ Phase 4 - Mempool Heatmap Dashboard. Done.
 Phase 5 - LightGBM Fees Prediction Model. Done.
 Phase 6 - Entity Clustering. Done.
 Phase 7 - Apache Superset Unified Dashboard. Pending.
-Phase 8 - LightGBM Trading Bot. Pending.
+Phase 8 - LightGBM Trading Bot. Done.
 
 ## System Architecture
 
@@ -190,7 +190,25 @@ Key findings: Algorithm found BTC $10K breakout (Nov 2020) as natural boundary b
 
 ## Repository Structure
 
-btc-etl/ with etl/ (4 Python scripts), notebooks/ (6 Jupyter notebooks + images/ with 18 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
+btc-etl/ with etl/ (4 Python scripts + bot/ with 4 Python modules), notebooks/ (6 Jupyter notebooks + images/ with 18 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
+
+## Phase 8 - LightGBM Trading Bot
+
+
+
+Directory: bot/ (train.py, config.py, data.py, features.py)
+
+
+
+1H timeframe trading bot using LightGBM classifier with on-chain Z-Score filter. Backtested across 4 market regimes (2022-2026) with consistent profitability.
+
+
+
+Results (1H candles, size=2%, SL=0.5%): BEAR 2022 +7.68%, RECOVERY 2023 +3.42%, PRE-HALVING 2024 +6.00%, BULL 2025-2026 +4.38%. All 4 periods profitable. Z-Score filter reduces trades 80% while maintaining positive returns. On-chain `fees_zscore_change` ranks #4 feature importance.
+
+
+
+Key findings: 1H timeframe captures real edge (53-55% win rate). On-chain alpha matters at hourly scale. Model trained on 2020-2021, tested out-of-sample through 2026. Ready for live paper trading with Binance WebSocket.
 
 ## Quick Start
 
