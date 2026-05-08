@@ -9,7 +9,6 @@ from data import load_training_data
 from features import build_features
 
 def backtest_period(model, test, period_name, z_filter=False):
-    """Backtest con opción de filtrar por Z-Score."""
     probs = model.predict_proba(test[FEATURES].values)[:, 1]
     test = test.copy()
     test['prob'] = probs
@@ -21,10 +20,9 @@ def backtest_period(model, test, period_name, z_filter=False):
         prob = test.loc[idx, 'prob']
         z = test.loc[idx, 'fees_zscore']
         
-        # Condición base + filtro Z-Score opcional
         trade_signal = prob >= MIN_CONFIDENCE
         if z_filter:
-            trade_signal = trade_signal and z > 1.0  # Solo operar con momentum on-chain positivo
+            trade_signal = trade_signal and z > 1.0
         
         if trade_signal and i + 1 < len(test):
             trades += 1
@@ -44,13 +42,7 @@ def backtest_period(model, test, period_name, z_filter=False):
     ret_pct = (cap - INITIAL_CAPITAL) / INITIAL_CAPITAL * 100
     wr = wins / trades * 100 if trades else 0
     
-    return {
-        'period': period_name,
-        'return_pct': ret_pct,
-        'trades': trades,
-        'win_rate': wr,
-        'final_cap': cap
-    }
+    return {'period': period_name, 'return_pct': ret_pct, 'trades': trades, 'win_rate': wr, 'final_cap': cap}
 
 def train_and_backtest():
     print("=" * 60)
@@ -82,26 +74,20 @@ def train_and_backtest():
         ('BULL 2025-2026', '2025-01-01', '2026-05-05'),
     ]
     
-    print(f"\n{'='*60}")
-    print("WITHOUT Z-Score Filter")
-    print(f"{'='*60}")
-    for name, start, end in periods:
-        test = df[(df['open_time'] >= start) & (df['open_time'] < end)]
-        r = backtest_period(model, test, name, z_filter=False)
-        e = '🟢' if r['return_pct'] > 0 else '🔴'
-        print(f"{e} {name:20s} | {r['return_pct']:+.2f}% | {r['trades']:,} trades | Win: {r['win_rate']:.1f}%")
+    for filter_name, z_filter in [("WITHOUT Z-Score Filter", False), ("WITH Z-Score Filter (Z > 1.0)", True)]:
+        print(f"\n{'='*60}")
+        print(filter_name)
+        print(f"{'='*60}")
+        for name, start, end in periods:
+            test = df[(df['open_time'] >= start) & (df['open_time'] < end)]
+            r = backtest_period(model, test, name, z_filter=z_filter)
+            e = '🟢' if r['return_pct'] > 0 else '🔴'
+            print(f"{e} {name:20s} | {r['return_pct']:+.2f}% | {r['trades']:,} trades | Win: {r['win_rate']:.1f}%")
     
-    print(f"\n{'='*60}")
-    print("WITH Z-Score Filter (Z > 1.0 only)")
-    print(f"{'='*60}")
-    for name, start, end in periods:
-        test = df[(df['open_time'] >= start) & (df['open_time'] < end)]
-        r = backtest_period(model, test, name, z_filter=True)
-        e = '🟢' if r['return_pct'] > 0 else '🔴'
-        print(f"{e} {name:20s} | {r['return_pct']:+.2f}% | {r['trades']:,} trades | Win: {r['win_rate']:.1f}%")
-    
-    os.makedirs('../models', exist_ok=True)
-    path = f'../models/lgbm_bot_1h_{datetime.now().strftime("%Y%m%d")}.pkl'
+    # Guardar en ruta correcta
+    MODEL_DIR = "/media/SSD4T/btc-etl/models"
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    path = os.path.join(MODEL_DIR, f'lgbm_bot_1h_{datetime.now().strftime("%Y%m%d")}.pkl')
     joblib.dump(model, path)
     print(f"\nSaved: {path}")
 
