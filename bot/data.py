@@ -5,6 +5,7 @@ import numpy as np
 def load_training_data():
     client = clickhouse_connect.get_client(host='localhost', port=8123)
     
+    # 1m data from Binance
     df_1m = client.query_df('''
         SELECT open_time, open, high, low, close, volume, quote_volume, trades
         FROM btc_1m
@@ -12,6 +13,7 @@ def load_training_data():
         ORDER BY open_time
     ''')
     
+    # On-chain fees
     df_fees = client.query_df('''
         SELECT toDate(toDateTime(time)) AS date, sum(fees_sats)/1e8 AS fees_btc
         FROM block_metrics
@@ -30,7 +32,7 @@ def load_training_data():
     df_1m['fees_zscore'] = df_1m['fees_zscore'].fillna(0)
     df_1m = df_1m.drop(columns=['date'])
     
-    # Agregar a 1h
+    # Aggregate to 1h
     df_1m['hour_bucket'] = df_1m['open_time'].dt.floor('1h')
     df_1h = df_1m.groupby('hour_bucket').agg(
         open=('open', 'first'), high=('high', 'max'), low=('low', 'min'),

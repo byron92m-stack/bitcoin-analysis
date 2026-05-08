@@ -192,7 +192,7 @@ Key findings: Algorithm found BTC $10K breakout (Nov 2020) as natural boundary b
 
 btc-etl/ with etl/ (4 Python scripts + bot/ with 4 Python modules), notebooks/ (6 Jupyter notebooks + images/ with 18 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
 
-## Phase 7 - LightGBM Trading Bot v3
+## Phase 7 - LightGBM Trading Bot v4
 
 
 
@@ -200,11 +200,11 @@ Directory: bot/ (train.py, config.py, data.py, features.py, live.py, paper_trade
 
 
 
-1H timeframe trading bot using LightGBM with 24 features: price action, technical analysis (RSI, MACD, Bollinger Bands, ATR, SMA crosses), on-chain Z-Score from Phase 3, and temporal features. Walk-forward backtesting across 9 periods with model retrained every 6 months.
+1H timeframe trading bot using LightGBM with 26 features (including Funding Rate): price action, technical analysis (RSI, MACD, Bollinger Bands, ATR, SMA crosses, Funding Rate), on-chain Z-Score from Phase 3, and temporal features. Walk-forward backtesting across 9 periods with model retrained every 6 months.
 
 
 
-Walk-Forward Results (1H candles, size=1.5%, dynamic ATR-based SL, 9 periods): ALL PERIODS PROFITABLE. Total Return +15.85%. Win Rate 53.8%. Profit Factor 1.82. Sharpe 22.1. Sortino 68.0. Max Drawdown -0.06%. Expectancy +0.077% per trade. 12,806 trades.
+Walk-Forward Results v4 (1H candles, Kelly sizing + Trailing Stop + Max Daily Loss, 9 periods): ALL PERIODS PROFITABLE. Total Return +69.74%. Win Rate 53.8%. Profit Factor 2.02. Sharpe 26.4. Sortino 94.7. Max Drawdown -0.14%. Expectancy +0.103% per trade. 12,806 trades. Avg Win +0.38%. Avg Loss -0.22%. Win/Loss Ratio 1.7:1.
 
 
 
@@ -216,7 +216,7 @@ Live Trading: WebSocket connection to Binance (public, no API key). Predicts LON
 
 
 
-![Equity Curve](notebooks/images/equity_curve.png)
+![Equity Curve](notebooks/images/equity_curve_v4.png)
 
 
 Start ClickHouse from /media/SSD4T/clickhouse. Run ETL scripts with venvetl (options 1/2/3). Launch JupyterLab with venvquant. ClickHouse tables use File(Parquet) engine via user_files/ symlinks.

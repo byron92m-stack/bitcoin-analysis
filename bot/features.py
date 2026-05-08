@@ -1,5 +1,5 @@
 """
-Feature engineering — v2 con análisis técnico + risk management.
+Feature engineering — v4 con Funding Rate + Kelly sizing features
 """
 import numpy as np
 import pandas as pd
@@ -31,23 +31,23 @@ def build_features(df):
     df['momentum_4h'] = df['close'] - df['close'].shift(4)
     df['momentum_24h'] = df['close'] - df['close'].shift(24)
     
-    # === ANÁLISIS TÉCNICO ===
+    # === TECHNICAL ANALYSIS ===
     
-    # RSI (Relative Strength Index) — 14 períodos
+    # RSI (14)
     delta = df['close'].diff()
     gain = delta.where(delta > 0, 0).rolling(14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
     rs = gain / (loss + 1e-9)
     df['rsi_14'] = 100 - (100 / (1 + rs))
     
-    # MACD (Moving Average Convergence Divergence)
+    # MACD
     ema12 = df['close'].ewm(span=12, adjust=False).mean()
     ema26 = df['close'].ewm(span=26, adjust=False).mean()
     df['macd'] = ema12 - ema26
     df['macd_signal'] = df['macd'].ewm(span=9, adjust=False).mean()
     df['macd_hist'] = df['macd'] - df['macd_signal']
     
-    # Bollinger Bands (20 períodos, 2 desviaciones)
+    # Bollinger Bands
     df['bb_middle'] = df['close'].rolling(20).mean()
     bb_std = df['close'].rolling(20).std()
     df['bb_upper'] = df['bb_middle'] + 2 * bb_std
@@ -55,7 +55,7 @@ def build_features(df):
     df['bb_position'] = (df['close'] - df['bb_lower']) / (df['bb_upper'] - df['bb_lower'] + 1e-9)
     df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['bb_middle']
     
-    # ATR (Average True Range) — 14 períodos
+    # ATR
     high_low = df['high'] - df['low']
     high_close = np.abs(df['high'] - df['close'].shift(1))
     low_close = np.abs(df['low'] - df['close'].shift(1))
@@ -68,11 +68,18 @@ def build_features(df):
     df['sma_50'] = df['close'].rolling(50).mean()
     df['sma_cross'] = (df['sma_10'] > df['sma_50']).astype(int)
     
-    # === ON-CHAIN (Phase 3) ===
+    # === FUNDING RATE (placeholder — will be 0 in historical data) ===
+    if 'funding_rate' in df.columns:
+        df['funding_rate'] = df['funding_rate'].fillna(0)
+    else:
+        df['funding_rate'] = 0
+    df['funding_signal'] = 0
+    df.loc[df['funding_rate'] > 0.01, 'funding_signal'] = 1   # Extremely bullish
+    df.loc[df['funding_rate'] < -0.01, 'funding_signal'] = -1  # Extremely bearish
+    
+    # === ON-CHAIN ===
     df['fees_zscore_ma7'] = df['fees_zscore'].rolling(7).mean()
     df['fees_zscore_change'] = df['fees_zscore'] - df['fees_zscore'].shift(24)
-    
-    # Z-Score regime
     df['zscore_regime'] = 0
     df.loc[df['fees_zscore'] > 1.0, 'zscore_regime'] = 1
     df.loc[df['fees_zscore'] > 2.0, 'zscore_regime'] = 2
