@@ -192,25 +192,32 @@ Key findings: Algorithm found BTC $10K breakout (Nov 2020) as natural boundary b
 
 btc-etl/ with etl/ (4 Python scripts + bot/ with 4 Python modules), notebooks/ (6 Jupyter notebooks + images/ with 18 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
 
-## Phase 7 - LightGBM Trading Bot
+## Phase 7 - LightGBM Trading Bot v3
 
 
 
-Directory: bot/ (train.py, config.py, data.py, features.py)
+Directory: bot/ (train.py, config.py, data.py, features.py, live.py, paper_trader.py)
 
 
 
-1H timeframe trading bot using LightGBM classifier with on-chain Z-Score filter. Backtested across 4 market regimes (2022-2026) with consistent profitability.
+1H timeframe trading bot using LightGBM with 24 features: price action, technical analysis (RSI, MACD, Bollinger Bands, ATR, SMA crosses), on-chain Z-Score from Phase 3, and temporal features. Walk-forward backtesting across 9 periods with model retrained every 6 months.
 
 
 
-Results (1H candles, size=2%, SL=0.5%): BEAR 2022 +7.68%, RECOVERY 2023 +3.42%, PRE-HALVING 2024 +6.00%, BULL 2025-2026 +4.38%. All 4 periods profitable. Z-Score filter reduces trades 80% while maintaining positive returns. On-chain `fees_zscore_change` ranks #4 feature importance.
+Walk-Forward Results (1H candles, size=1.5%, dynamic ATR-based SL, 9 periods): ALL PERIODS PROFITABLE. Total Return +15.85%. Win Rate 53.8%. Profit Factor 1.82. Sharpe 22.1. Sortino 68.0. Max Drawdown -0.06%. Expectancy +0.077% per trade. 12,806 trades.
 
 
 
-Key findings: 1H timeframe captures real edge (53-55% win rate). On-chain alpha matters at hourly scale. Model trained on 2020-2021, tested out-of-sample through 2026. Ready for live paper trading with Binance WebSocket.
+Technical Analysis Impact: RSI ranks #2 feature importance (390). Bollinger position #4 (360). MACD histogram #8 (307). All 9 walk-forward periods re-train on prior 6 months, test out-of-sample. Zero data leakage.
 
-## Quick Start
+
+
+Live Trading: WebSocket connection to Binance (public, no API key). Predicts LONG/WAIT every hour with confidence score, Z-Score, and RSI. Paper trader simulates P&L with $10,000 virtual capital.
+
+
+
+![Equity Curve](notebooks/images/equity_curve.png)
+
 
 Start ClickHouse from /media/SSD4T/clickhouse. Run ETL scripts with venvetl (options 1/2/3). Launch JupyterLab with venvquant. ClickHouse tables use File(Parquet) engine via user_files/ symlinks.
 
