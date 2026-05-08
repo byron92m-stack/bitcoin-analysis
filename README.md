@@ -10,8 +10,8 @@ Phase 3 - Momentum Signal: Fee Z-Score, price divergence, regime detection. Done
 Phase 4 - Mempool Heatmap Dashboard. Done.
 Phase 5 - LightGBM Fees Prediction Model. Done.
 Phase 6 - Entity Clustering. Done.
-Phase 7 - Apache Superset Unified Dashboard. Pending.
-Phase 8 - LightGBM Trading Bot. Done.
+Phase 7 - LightGBM Trading Bot. Done.
+Phase 8 - Apache Superset Unified Dashboard. Pending.
 
 ## System Architecture
 
@@ -152,7 +152,7 @@ Model performance (5-fold CV, normal days <100 BTC): MAE 6.82 BTC, R2 0.626. Top
 
 
 
-Key findings: Log transform improved R2 from -1.09 to 0.626. Day-of-week is #1 predictor, confirming Phase 4 heatmap. Phase 3 Z-Score validated as predictive feature (#6). Market features (log_return, volatility) add significant predictive power. Model ready for integration with Phase 8 trading bot.
+Key findings: Log transform improved R2 from -1.09 to 0.626. Day-of-week is #1 predictor, confirming Phase 4 heatmap. Phase 3 Z-Score validated as predictive feature (#6). Market features (log_return, volatility) add significant predictive power. Model ready for integration with Phase 7 trading bot.
 
 
 
@@ -192,7 +192,7 @@ Key findings: Algorithm found BTC $10K breakout (Nov 2020) as natural boundary b
 
 btc-etl/ with etl/ (4 Python scripts + bot/ with 4 Python modules), notebooks/ (6 Jupyter notebooks + images/ with 18 PNGs), parquet/ (4 capa directories, gitignored), state JSON files (gitignored), logs/ (gitignored), config/, venvetl/, venvquant/, README.md.
 
-## Phase 8 - LightGBM Trading Bot
+## Phase 7 - LightGBM Trading Bot
 
 
 
