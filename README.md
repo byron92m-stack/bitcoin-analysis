@@ -1,5 +1,12 @@
 # Bitcoin On-Chain Analytics (2017-2026)
 
+[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
+[![ClickHouse](https://img.shields.io/badge/ClickHouse-26.4-yellow.svg)](https://clickhouse.com)
+[![LightGBM](https://img.shields.io/badge/LightGBM-4.6-green.svg)](https://lightgbm.readthedocs.io)
+[![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
+[![Phases](https://img.shields.io/badge/Phases-7%2F8%20complete-orange.svg)]()
+[![Backtest](https://img.shields.io/badge/Backtest-%2B69.74%25-success.svg)]()
+
 Full ETL pipeline and OLAP analysis of Bitcoin's UTXO system, fee dynamics, and quantitative momentum signals during the modern exchange era. Built with Bitcoin Core, Parquet, ClickHouse, and Python/JupyterLab.
 
 ## Phases
