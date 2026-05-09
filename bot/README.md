@@ -27,6 +27,7 @@ train.py — Walk-forward backtest with Kelly sizing, trailing stop, max daily l
 live.py — WebSocket live signals every hour with auto-reconnect.
 
 paper_trader.py — Simulated trading with 10,000 dollars virtual capital.
+funding_collector.py — Collects funding rate from Binance Futures WebSocket, stores in ClickHouse.
 
 ## Features (26)
 
@@ -86,4 +87,5 @@ Total Return: +69.74 percent over 4.5 years. Annualized Return: +11.2 percent pe
 
 Train model: python bot/train.py
 Live signals (no trades): python bot/live.py
+Start funding collector: python bot/funding_collector.py &
 Paper trading (simulated): python bot/paper_trader.py
