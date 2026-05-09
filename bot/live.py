@@ -1,10 +1,11 @@
 """
-Phase 7 — Live Trading Bot v4
-WebSocket with auto-reconnect + Kelly sizing display
+Phase 7 - Live Trading Bot v4
+Preloads 50 historical candles, then WebSocket predictions.
 """
 import os, sys, json, time, joblib, glob
 import pandas as pd
 import numpy as np
+import clickhouse_connect
 from datetime import datetime, timezone
 from websocket import create_connection, WebSocketConnectionClosedException
 
@@ -20,6 +21,25 @@ def load_latest_model():
     print(f"Model: {os.path.basename(models[-1])}")
     return joblib.load(models[-1])
 
+def load_historical_candles():
+    client = clickhouse_connect.get_client(host='localhost', port=8123)
+    df = client.query_df('''
+        SELECT open_time, open, high, low, close, volume, quote_volume, trades
+        FROM btc_1m
+        WHERE open_time >= now() - INTERVAL 14 DAY
+        ORDER BY open_time
+    ''')
+    df['hour_bucket'] = df['open_time'].dt.floor('1h')
+    df_1h = df.groupby('hour_bucket').agg(
+        open=('open', 'first'), high=('high', 'max'), low=('low', 'min'),
+        close=('close', 'last'), volume=('volume', 'sum'),
+        quote_volume=('quote_volume', 'sum'), trades=('trades', 'sum')
+    ).reset_index()
+    df_1h.rename(columns={'hour_bucket': 'open_time'}, inplace=True)
+    candles = df_1h.tail(50).to_dict('records')
+    print(f"Preloaded {len(candles)} historical candles. Last: {candles[-1]['open_time']}")
+    return candles
+
 def build_live_features(df_1h, fees_zscore):
     df = df_1h.copy()
     df['target'] = 0
@@ -29,7 +49,6 @@ def build_live_features(df_1h, fees_zscore):
     df['log_return'] = np.log(df['close'] / df['close'].shift(1))
     df['volatility_4h'] = df['log_return'].rolling(4).std()
     df['volatility_24h'] = df['log_return'].rolling(24).std()
-    df['volume_ma4'] = df['volume'].rolling(4).mean()
     df['volume_ma24'] = df['volume'].rolling(24).mean()
     df['volume_ratio'] = df['volume'] / df['volume_ma24']
     df['range_pct'] = (df['high'] - df['low']) / df['open'] * 100
@@ -73,21 +92,18 @@ def build_live_features(df_1h, fees_zscore):
 
 def get_fees_zscore():
     try:
-        import clickhouse_connect
         client = clickhouse_connect.get_client(host='localhost', port=8123)
         result = client.query('''
-            SELECT (sum(fees_sats)/1e8 - avg_30) / nullIf(std_30, 0) AS fees_zscore
+            SELECT (avg_today - avg_30) / nullIf(std_30, 0) AS zscore
             FROM (
-                SELECT fees_sats,
-                    avg(fees_sats/1e8) OVER (ORDER BY toDate(toDateTime(time))
-                        ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) AS avg_30,
-                    stddevPop(fees_sats/1e8) OVER (ORDER BY toDate(toDateTime(time))
-                        ROWS BETWEEN 29 PRECEDING AND CURRENT ROW) AS std_30
-                FROM block_metrics WHERE toDate(toDateTime(time)) >= today() - 60
-            ) LIMIT 1
+                SELECT 
+                    (SELECT avg(fees_sats/1e8) FROM block_metrics WHERE toDate(toDateTime(time)) = today()) AS avg_today,
+                    (SELECT avg(fees_sats/1e8) FROM block_metrics WHERE toDate(toDateTime(time)) >= today() - 30) AS avg_30,
+                    (SELECT stddevPop(fees_sats/1e8) FROM block_metrics WHERE toDate(toDateTime(time)) >= today() - 30) AS std_30
+            )
         ''')
-        return result.first_row[0] if result.first_row else 0
-    except:
+        return result.first_row[0] if result.first_row and result.first_row[0] else 0
+    except Exception as e:
         return 0
 
 def connect_ws():
@@ -101,11 +117,13 @@ def connect_ws():
 
 def main():
     print("=" * 60)
-    print("Phase 7 - Live Trading Bot v4 (Auto-Reconnect)")
+    print("Phase 7 - Live Trading Bot v4")
     print("=" * 60)
     
     model = load_latest_model()
-    candles = []
+    print("\nLoading historical candles...")
+    candles = load_historical_candles()
+    
     ws = connect_ws()
     print("Connected.\n")
     print(f"{'Time':<8} {'Price':<12} {'Signal':<8} {'Conf':<8} {'Z':<8} {'RSI':<8}")

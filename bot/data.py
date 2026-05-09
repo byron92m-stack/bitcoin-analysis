@@ -42,5 +42,31 @@ def load_training_data():
     ).reset_index()
     df_1h.rename(columns={'hour_bucket': 'open_time'}, inplace=True)
     
+    # Load funding rate (if table exists)
+    try:
+        df_funding = client.query_df('''
+            SELECT 
+                toStartOfHour(timestamp) AS hour,
+                avg(funding_rate) AS funding_rate
+            FROM funding_rates
+            WHERE timestamp >= '2020-01-01'
+            GROUP BY hour
+            ORDER BY hour
+        ''')
+        
+        if len(df_funding) > 0:
+            df_funding['hour'] = pd.to_datetime(df_funding['hour'])
+            df_1h['hour_round'] = df_1h['open_time'].dt.floor('1h')
+            df_1h = df_1h.merge(df_funding, left_on='hour_round', right_on='hour', how='left')
+            df_1h['funding_rate'] = df_1h['funding_rate'].fillna(0)
+            df_1h = df_1h.drop(columns=['hour_round', 'hour'])
+            print(f"   Funding rate loaded: {len(df_funding):,} hours")
+        else:
+            df_1h['funding_rate'] = 0
+            print("   No funding rate data yet. Run: python bot/funding_collector.py &")
+    except Exception as e:
+        df_1h['funding_rate'] = 0
+        print(f"   Funding rate table not found. Run: python bot/funding_collector.py &")
+    
     print(f"   1h candles: {len(df_1h):,}")
     return df_1h
