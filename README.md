@@ -24,13 +24,13 @@ Phase 8 — Apache Superset Dashboard. Pending.
 
 Four-layer ETL pipeline with zero data duplication. Bitcoin Core with txindex=1 extracts raw blockchain data. ClickHouse reads Parquet files directly via File engine — no import step, no extra storage.
 
-Layer 1 (capa1_btccore_parquet): Blocks, transactions, inputs, outputs. 948,312 blocks processed from height 0 to 948,069.
+Layer 1 (capa1_btccore_parquet): Blocks, transactions, inputs, outputs. 948,906 blocks processed from height 0 to 948,523.
 
 Layer 2 (capa2_utxo_parquet): Normalized UTXO events. 7.08 billion create/spend events.
 
 Layer 3 (capa3_block_metrics): Pre-computed fees = coinbase outputs minus block subsidy. 301,789 BTC total fees identified.
 
-Layer 4 (capa4_binance): BTC/USDT from Binance API. 4.58M 1m candles, 3,185 daily candles.
+Layer 4 (capa4_binance): BTC/USDT from Binance API. 4.58M 1m candles, 3,187 daily candles.
 
 Stack: Bitcoin Core RPC + Binance API to Python ETL to Parquet (zstd) to ClickHouse File Engine to JupyterLab (pandas, matplotlib). State JSON files for pause/resume. Menu-driven ETL (1=reset, 2=continue, 3=rollback). 250-unit batches. Zero duplication.
 
@@ -50,7 +50,7 @@ Heavy-tail value distribution spanning 10 orders of magnitude. 5-10 year cohorts
 
 Notebook: notebooks/02_fees_over_time.ipynb
 
-3,218 days analyzed from July 2017 to May 2026. 192,552 BTC total fees. Mean 59.84 BTC/day. Median 23.04 BTC/day. Max 1,369.48 BTC on December 22, 2017. Halving 2024: 861.14 BTC ranked number 5 all-time. 9 of top 10 fee days during December 2017 to January 2018 bull peak. MA30 reveals 4-year cyclical patterns. Post-2024 fees structurally elevated.
+3,187 days analyzed from July 2017 to May 2026. 192,552 BTC total fees. Mean 59.84 BTC/day. Median 23.04 BTC/day. Max 1,369.48 BTC on December 22, 2017. Halving 2024: 861.14 BTC ranked number 5 all-time. 9 of top 10 fee days during December 2017 to January 2018 bull peak. MA30 reveals 4-year cyclical patterns. Post-2024 fees structurally elevated.
 
 ![Fees Log Scale](notebooks/images/fees_over_time_binance_era.png)
 ![Fees Linear Scale](notebooks/images/fees_binance_era_linear.png)
@@ -100,7 +100,7 @@ Directory: bot/ — Full documentation at bot/README.md
 
 1H timeframe trading bot with 26 features: price action, technical analysis (RSI, MACD, Bollinger Bands, ATR, SMA crosses, Funding Rate), on-chain Z-Score from Phase 3, and temporal features. Walk-forward backtesting across 9 periods with model retrained every 6 months. Kelly sizing plus trailing stop plus max daily loss.
 
-Results: +69.74 percent total return over 4.5 years. 12,806 trades. Win rate 53.8 percent. Profit factor 2.02. Sharpe 26.4. Sortino 94.7. Max drawdown -0.14 percent. Expectancy +0.103 percent per trade. Average win +0.38 percent. Average loss -0.22 percent. All 9 periods profitable.
+Results: +69.48 percent total return over 4.5 years. 12,778 trades. Win rate 53.8 percent. Profit factor 2.02. Sharpe 26.4. Sortino 94.7. Max drawdown -0.14 percent. Expectancy +0.103 percent per trade. Average win +0.38 percent. Average loss -0.22 percent. All 9 periods profitable.
 
 ![Equity Curve](notebooks/images/equity_curve_v4.png)
 
