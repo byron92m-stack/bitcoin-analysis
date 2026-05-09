@@ -2,22 +2,20 @@ import clickhouse_connect
 import pandas as pd
 import numpy as np
 
-def load_training_data():
+def load_training_data(timeframe='5m'):
     client = clickhouse_connect.get_client(host='localhost', port=8123)
     
-    # 1m data from Binance
     df_1m = client.query_df('''
         SELECT open_time, open, high, low, close, volume, quote_volume, trades
         FROM btc_1m
-        WHERE open_time >= '2020-01-01'
+        WHERE open_time >= '2017-01-01'
         ORDER BY open_time
     ''')
     
-    # On-chain fees
     df_fees = client.query_df('''
         SELECT toDate(toDateTime(time)) AS date, sum(fees_sats)/1e8 AS fees_btc
         FROM block_metrics
-        WHERE toDate(toDateTime(time)) >= '2019-12-01'
+        WHERE toDate(toDateTime(time)) >= '2016-12-01'
         GROUP BY date ORDER BY date
     ''')
     
@@ -32,41 +30,17 @@ def load_training_data():
     df_1m['fees_zscore'] = df_1m['fees_zscore'].fillna(0)
     df_1m = df_1m.drop(columns=['date'])
     
-    # Aggregate to 1h
-    df_1m['hour_bucket'] = df_1m['open_time'].dt.floor('1h')
-    df_1h = df_1m.groupby('hour_bucket').agg(
+    # Usar el timeframe pasado como parámetro
+    bucket_map = {'5m': '5min', '15m': '15min', '1h': '1h', '4h': '4h', '1d': '1d'}
+    bucket = bucket_map.get(timeframe, '15min')
+    df_1m['bucket'] = df_1m['open_time'].dt.floor(bucket)
+    df_tf = df_1m.groupby('bucket').agg(
         open=('open', 'first'), high=('high', 'max'), low=('low', 'min'),
         close=('close', 'last'), volume=('volume', 'sum'),
         quote_volume=('quote_volume', 'sum'), trades=('trades', 'sum'),
         fees_zscore=('fees_zscore', 'last')
     ).reset_index()
-    df_1h.rename(columns={'hour_bucket': 'open_time'}, inplace=True)
+    df_tf.rename(columns={'bucket': 'open_time'}, inplace=True)
     
-    # Load funding rate (if table exists)
-    try:
-        df_funding = client.query_df('''
-            SELECT 
-                toStartOfHour(timestamp) AS hour,
-                avg(funding_rate) AS funding_rate
-            FROM funding_rates
-            WHERE timestamp >= '2020-01-01'
-            GROUP BY hour
-            ORDER BY hour
-        ''')
-        
-        if len(df_funding) > 0:
-            df_funding['hour'] = pd.to_datetime(df_funding['hour'])
-            df_1h['hour_round'] = df_1h['open_time'].dt.floor('1h')
-            df_1h = df_1h.merge(df_funding, left_on='hour_round', right_on='hour', how='left')
-            df_1h['funding_rate'] = df_1h['funding_rate'].fillna(0)
-            df_1h = df_1h.drop(columns=['hour_round', 'hour'])
-            print(f"   Funding rate loaded: {len(df_funding):,} hours")
-        else:
-            df_1h['funding_rate'] = 0
-            print("   No funding rate data yet. Run: python bot/funding_collector.py &")
-    except Exception as e:
-        df_1h['funding_rate'] = 0
-        print(f"   Funding rate table not found. Run: python bot/funding_collector.py &")
-    
-    print(f"   1h candles: {len(df_1h):,}")
-    return df_1h
+    print(f"   {timeframe} candles: {len(df_tf):,}")
+    return df_tf

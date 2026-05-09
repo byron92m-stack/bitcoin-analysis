@@ -26,7 +26,7 @@ def load_historical_candles():
     df = client.query_df('''
         SELECT open_time, open, high, low, close, volume, quote_volume, trades
         FROM btc_1m
-        WHERE open_time >= now() - INTERVAL 14 DAY
+        WHERE open_time >= now() - INTERVAL 7 DAY
         ORDER BY open_time
     ''')
     df['hour_bucket'] = df['open_time'].dt.floor('1h')
@@ -36,7 +36,7 @@ def load_historical_candles():
         quote_volume=('quote_volume', 'sum'), trades=('trades', 'sum')
     ).reset_index()
     df_1h.rename(columns={'hour_bucket': 'open_time'}, inplace=True)
-    candles = df_1h.tail(50).to_dict('records')
+    candles = df_1h.tail(100).to_dict('records')
     print(f"Preloaded {len(candles)} historical candles. Last: {candles[-1]['open_time']}")
     return candles
 
@@ -109,7 +109,7 @@ def get_fees_zscore():
 def connect_ws():
     while True:
         try:
-            ws = create_connection("wss://stream.binance.com:9443/ws/btcusdt@kline_1h", timeout=30)
+            ws = create_connection("wss://stream.binance.com:9443/ws/btcusdt@kline_5m", timeout=30)
             return ws
         except Exception as e:
             print(f"Connection failed: {e}. Retrying in 5s...")
