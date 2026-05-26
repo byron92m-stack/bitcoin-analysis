@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: btc-rag
+Version: 0.1.0
+Summary: Bitcoin On-Chain Analytics Assistant
+Requires-Python: >=3.12
+Requires-Dist: fastapi
+Requires-Dist: uvicorn
+Requires-Dist: httpx
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"
+Requires-Dist: pytest-asyncio; extra == "test"

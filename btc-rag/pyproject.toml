@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "btc-rag"
+version = "0.1.0"
+description = "Bitcoin On-Chain Analytics Assistant"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-asyncio"]
