@@ -27,3 +27,6 @@ state_*.json
 .ipynb_checkpoints/
 models/*.pkl
 models/*.pkl
+bot/logs/live_signals.csv
+btc-rag/src/btc_rag.egg-info/
+btc-rag/.pytest_cache/
