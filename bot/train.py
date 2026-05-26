@@ -26,17 +26,13 @@ def calculate_metrics(trades_df, history):
     gross_profit = returns[returns > 0].sum()
     gross_loss = abs(returns[returns < 0].sum())
     profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
-    avg_win = returns[returns > 0].mean() if len(returns[returns > 0]) > 0 else 0
-    avg_loss = returns[returns < 0].mean() if len(returns[returns < 0]) > 0 else 0
-    expectancy = (win_rate * avg_win) - ((1 - win_rate) * abs(avg_loss))
-    return {'sharpe': sharpe, 'profit_factor': profit_factor, 'expectancy': expectancy,
-            'win_rate': win_rate, 'max_dd': max_dd, 'total_return': total_return,
-            'avg_win': avg_win, 'avg_loss': avg_loss}
+    return {'sharpe': sharpe, 'profit_factor': profit_factor, 'win_rate': win_rate,
+            'max_dd': max_dd, 'total_return': total_return}
 
-def backtest(df):
-    train = df[df['open_time'] < '2022-01-01']
-    test = df[df['open_time'] >= '2022-01-01'].copy()
-    if len(train) < 100 or len(test) < 10: return None, len(test)
+def backtest_period(df, train_start, train_end, test_start, test_end, name):
+    train = df[(df['open_time'] >= train_start) & (df['open_time'] < train_end)]
+    test = df[(df['open_time'] >= test_start) & (df['open_time'] < test_end)]
+    if len(train) < 100 or len(test) < 10: return None
     
     model = lgb.LGBMClassifier(**LGBM_PARAMS)
     model.fit(train[FEATURES].values, train[TARGET].values)
@@ -45,8 +41,6 @@ def backtest(df):
     cap = INITIAL_CAPITAL
     trades = []
     history = [cap]
-    in_position = False
-    entry_price = trailing_high = 0
     
     for i, (idx, prob) in enumerate(zip(test.index, probs)):
         z = test.loc[idx, 'fees_zscore']
@@ -56,15 +50,6 @@ def backtest(df):
             actual_return = (close_next - close_now) / close_now
             actual = test.loc[idx, 'target']
             
-            if not in_position:
-                entry_price = close_now
-                trailing_high = close_now
-                in_position = True
-            if close_now > trailing_high: trailing_high = close_now
-            if (close_now - trailing_high) / trailing_high < -TRAILING_STOP_DISTANCE:
-                actual_return = (close_now - entry_price) / entry_price
-                in_position = False
-            
             if actual == 1: pnl_pct = min(abs(actual_return), TAKE_PROFIT)
             else: pnl_pct = -min(abs(actual_return), STOP_LOSS)
             
@@ -72,35 +57,61 @@ def backtest(df):
             trades.append({'pnl_pct': pnl_pct, 'win': actual == 1})
             history.append(cap)
     
-    return calculate_metrics(pd.DataFrame(trades), history), len(test)
+    metrics = calculate_metrics(pd.DataFrame(trades), history)
+    if metrics:
+        print(f"  {name:<15} | Return: {metrics['total_return']*100:+.2f}% | "
+              f"Trades: {len(trades):,} | Win: {metrics['win_rate']*100:.1f}% | "
+              f"PF: {metrics['profit_factor']:.2f} | Sharpe: {metrics['sharpe']:.2f}")
+    return metrics
 
 def main():
     print("=" * 60)
-    print("Multi-Timeframe: 5m, 15m, 1h, 4h, 1d")
+    print("LightGBM Bot v5 — 5m Timeframe")
     print("=" * 60)
     
-    results = []
-    for tf in ['5m', '15m', '1h', '4h', '1d']:
-        print(f"\n--- {tf.upper()} ---")
-        df = load_training_data(timeframe=tf)
-        df = build_features(df)
-        metrics, n_candles = backtest(df)
-        if metrics:
-            print(f"  Candles: {n_candles:,}")
-            print(f"  Return: {metrics['total_return']*100:+.2f}% | Win: {metrics['win_rate']*100:.1f}% | PF: {metrics['profit_factor']:.2f} | Sharpe: {metrics['sharpe']:.2f}")
-            results.append({'tf': tf, 'candles': n_candles, **metrics})
+    print("\n1. Loading 5m data...")
+    df = load_training_data(timeframe='5m')
     
-    if results:
-        print(f"\n{'='*80}")
-        print(f"{'TF':<6} {'Candles':>9} {'Return':>10} {'Win':>8} {'PF':>8} {'Sharpe':>8} {'MaxDD':>8}")
-        print("-" * 80)
-        for r in results:
-            print(f"{r['tf']:<6} {r['candles']:>9,} {r['total_return']*100:>+9.2f}% {r['win_rate']*100:>7.1f}% {r['profit_factor']:>7.2f} {r['sharpe']:>7.2f} {r['max_dd']*100:>7.2f}%")
+    print("\n2. Building features...")
+    df = build_features(df)
+    print(f"   {len(df):,} candles, {len(FEATURES)} features")
+    
+    # Walk-forward por épocas (entrenar 1 año, testear 6 meses)
+    periods = [
+        ('H2 2019', '2019-01-01', '2019-06-30', '2019-07-01', '2019-12-31'),
+        ('H1 2020', '2019-07-01', '2019-12-31', '2020-01-01', '2020-06-30'),
+        ('H2 2020', '2020-01-01', '2020-06-30', '2020-07-01', '2020-12-31'),
+        ('H1 2021', '2020-07-01', '2020-12-31', '2021-01-01', '2021-06-30'),
+        ('H2 2021', '2021-01-01', '2021-06-30', '2021-07-01', '2021-12-31'),
+        ('H1 2022', '2021-07-01', '2021-12-31', '2022-01-01', '2022-06-30'),
+        ('H2 2022', '2022-01-01', '2022-06-30', '2022-07-01', '2022-12-31'),
+        ('H1 2023', '2022-07-01', '2022-12-31', '2023-01-01', '2023-06-30'),
+        ('H2 2023', '2023-01-01', '2023-06-30', '2023-07-01', '2023-12-31'),
+        ('H1 2024', '2023-07-01', '2023-12-31', '2024-01-01', '2024-06-30'),
+        ('H2 2024', '2024-01-01', '2024-06-30', '2024-07-01', '2024-12-31'),
+        ('H1 2025', '2024-07-01', '2024-12-31', '2025-01-01', '2025-06-30'),
+    ]
+    
+    print(f"\n{'='*80}")
+    print("WALK-FORWARD (retrained every 6 months, tested out-of-sample)")
+    print(f"{'='*80}")
+    
+    for name, tr_s, tr_e, te_s, te_e in periods:
+        backtest_period(df, tr_s, tr_e, te_s, te_e, name)
     
     MODEL_DIR = "/media/SSD4T/btc-etl/models"
     os.makedirs(MODEL_DIR, exist_ok=True)
     path = os.path.join(MODEL_DIR, f'lgbm_bot_v5_{datetime.now().strftime("%Y%m%d")}.pkl')
     joblib.dump(lgb.LGBMClassifier(**LGBM_PARAMS), path)
+    print(f"\nSaved: {path}")
 
 if __name__ == "__main__":
     main()
+
+# Fix: entrenar modelo final sobre todos los datos
+print("\nTraining final model on all data...")
+final_model = lgb.LGBMClassifier(**LGBM_PARAMS)
+final_model.fit(df[FEATURES].values, df[TARGET].values)
+path = os.path.join(MODEL_DIR, f'lgbm_bot_v5_{datetime.now().strftime("%Y%m%d")}.pkl')
+joblib.dump(final_model, path)
+print(f"Final model saved: {path}")
