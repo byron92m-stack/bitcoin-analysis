@@ -127,7 +127,7 @@ Directory: btc-rag/ — Natural Language → SQL → ClickHouse
 
 
 
-Ask Bitcoin questions in Spanish. DeepSeek Flash FREE translates to SQL. ClickHouse executes. Response formatted in natural language. No API keys. No vector databases. Zero cost.
+Ask Bitcoin questions in natural language. DeepSeek Flash FREE translates natural language to SQL. ClickHouse executes. Response formatted in natural language. No API keys. No vector databases. Zero cost.
 
 
 
@@ -135,7 +135,7 @@ Stack: FastAPI + OpenCode (DeepSeek Flash FREE) + ClickHouse HTTP. 17 tests. Por
 
 
 
-Example: "¿Cuál fue el día con más fees en 2017?" → "22 de diciembre de 2017 con 1,369.48 BTC"
+Example: "What was the day with the highest fees in 2017?" → "December 22, 2017 with 1,369.48 BTC"
 
 ## Repository Structure
 
