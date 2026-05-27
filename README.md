@@ -4,7 +4,7 @@
 [![ClickHouse](https://img.shields.io/badge/ClickHouse-26.4-yellow.svg)](https://clickhouse.com)
 [![LightGBM](https://img.shields.io/badge/LightGBM-4.6-green.svg)](https://lightgbm.readthedocs.io)
 [![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Phases](https://img.shields.io/badge/Phases-8%2F9%20complete-orange.svg)]()
+[![Phases](https://img.shields.io/badge/Phases-9%2F9%20complete-orange.svg)]()
 [![Backtest](https://img.shields.io/badge/Backtest-%2B16.76%25-success.svg)]()
 
 Full ETL pipeline and OLAP analysis of Bitcoin's UTXO system, fee dynamics, and quantitative momentum signals during the modern exchange era. Built with Bitcoin Core, Parquet, ClickHouse, and Python/JupyterLab.
@@ -18,7 +18,7 @@ Phase 4 — Mempool Heatmap: Fee congestion by hour and weekday. Done.
 Phase 5 — LightGBM Fee Prediction: Next-day fees with R2=0.626. Done.
 Phase 6 — Entity Clustering: HDBSCAN market regime discovery. Done.
 Phase 7 — Trading Bot: LightGBM 5m bot with on-chain alpha. Done.
-Phase 8 — Apache Superset Dashboard. Pending.
+Phase 8 — Streamlit Dashboard. Done.
 Phase 9 — BTC-RAG: NL→SQL Assistant. Done.
 
 ## System Architecture
@@ -104,6 +104,20 @@ Directory: bot/ — Full documentation at bot/README.md
 Results: +16.76 percent (455K trades) total return over 4.5 years. 455,469 trades. Win rate 55.4 percent. Profit factor 1.46. Sharpe 3.34. Sortino 3.34. Max drawdown 0.02 percent. Expectancy +0.03 percent per trade. Average win 0.08 percent. Average loss -0.05 percent. All timeframes profitable. Best: 5m with +16.76%.
 
 ![Equity Curve](notebooks/images/equity_curve_v4.png)
+
+## Phase 8 — Streamlit Dashboard
+
+
+
+File: dashboard/dashboard.py
+
+
+
+Interactive dashboard with 7 real-time charts: BTC price + volatility, fees + volume, Z-Score momentum, fees vs price scatter, live bot signals, and top 10 fee days. Built with Streamlit + Plotly + ClickHouse.
+
+
+
+![Dashboard](notebooks/images/dashboard_streamlit.png)
 
 ## Phase 9 — BTC-RAG: Bitcoin On-Chain Assistant
 
