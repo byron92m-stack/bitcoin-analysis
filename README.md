@@ -4,7 +4,7 @@
 [![ClickHouse](https://img.shields.io/badge/ClickHouse-26.4-yellow.svg)](https://clickhouse.com)
 [![LightGBM](https://img.shields.io/badge/LightGBM-4.6-green.svg)](https://lightgbm.readthedocs.io)
 [![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
-[![Phases](https://img.shields.io/badge/Phases-9%2F9%20complete-orange.svg)]()
+[![Phases](https://img.shields.io/badge/Phases-10%2F10%20complete-orange.svg)]()
 [![Backtest](https://img.shields.io/badge/Backtest-%2B16.76%25-success.svg)]()
 
 Full ETL pipeline and OLAP analysis of Bitcoin's UTXO system, fee dynamics, and quantitative momentum signals during the modern exchange era. Built with Bitcoin Core, Parquet, ClickHouse, and Python/JupyterLab.
@@ -20,12 +20,13 @@ Phase 6 — Entity Clustering: HDBSCAN market regime discovery. Done.
 Phase 7 — Trading Bot: LightGBM 5m bot with on-chain alpha. Done.
 Phase 8 — Streamlit Dashboard. Done.
 Phase 9 — BTC-RAG: NL→SQL Assistant. Done.
+Phase 10 — Whale Tracker: Full balance calculation, Satoshi tracking, wealth concentration. Done.
 
 ## System Architecture
 
-Four-layer ETL pipeline with zero data duplication. Bitcoin Core with txindex=1 extracts raw blockchain data. ClickHouse reads Parquet files directly via File engine — no import step, no extra storage.
+Eight-layer ETL pipeline with zero data duplication. Bitcoin Core with txindex=1 extracts raw blockchain data. ClickHouse reads Parquet files directly via File engine — no import step, no extra storage.
 
-Layer 1 (capa1_btccore_parquet): Blocks, transactions, inputs, outputs. 950,835 blocks processed from height 0 to 950,835.
+Layer 1 (capa1_btccore_parquet): Blocks, transactions, inputs, outputs. 954,408 blocks processed from height 0 to 954,408.
 
 Layer 2 (capa2_utxo_parquet): Normalized UTXO events. 7.08 billion create/spend events.
 
@@ -137,9 +138,23 @@ Stack: FastAPI + OpenCode (DeepSeek Flash FREE) + ClickHouse HTTP. 17 tests. Por
 
 Example: "What was the day with the highest fees in 2017?" → "December 22, 2017 with 1,369.48 BTC"
 
+
+## Phase 10 — Whale Tracking & Concentration Analysis
+
+Notebook: notebooks/10_whale_tracker.ipynb (uses DuckDB for offline analysis, unlike notebooks 01-06 which use ClickHouse)
+
+Complete balance calculation for all 56.4M Bitcoin addresses. 150,775 addresses hold more than 10 BTC, controlling 83.4% of supply. 20,109 whales (≥100 BTC) hold 62.2%. Satoshi-era P2PK vouchers: 29,996 unspent outputs totaling 1,504,568 BTC (9.0%), median age 17.7 years. Bech32 dominates with 47.0% of >10 BTC supply. 84.5% of whale BTC actively managed (last moved 2023-2026). Exchange cold wallets (Binance, Bitfinex, Huobi) dominate Top 20.
+
+![Cohorts BTC](notebooks/images/eda_cohorts.png)
+![Types Temporal](notebooks/images/eda_types_temporal.png)
+![Satoshi Deep Dive](notebooks/images/eda_satoshi_deep.png)
+![Histogram Boxplot](notebooks/images/eda_hist_boxplot.png)
+![Scatter Age](notebooks/images/eda_scatter_age.png)
+![Heatmap Type Cohort](notebooks/images/eda_heatmap_type_cohort.png)
+
 ## Repository Structure
 
-btc-etl/ contains btc-rag/ with FastAPI server, etl/ with 4 ETL scripts, notebooks/ with 6 Jupyter notebooks and images/ with 19 PNGs, bot/ with 6 Python files and README, models/ with trained LightGBM files (gitignored), parquet/ with 4 capa directories (gitignored), state JSON files (gitignored), logs/ (gitignored), venvetl/ and venvquant/ virtual environments, README.md, and LICENSE.
+btc-etl/ contains btc-rag/ with FastAPI server, etl/ with 8 ETL scripts, notebooks/ with 7 Jupyter notebooks and images/ with 33 PNGs, bot/ with 6 Python files and README, models/ with trained LightGBM files (gitignored), parquet/ with 4 capa directories (gitignored), state JSON files (gitignored), logs/ (gitignored), venvetl/ and venvquant/ virtual environments, README.md, and LICENSE.
 
 ## Quick Start
 
