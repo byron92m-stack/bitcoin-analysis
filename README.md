@@ -1,6 +1,6 @@
 # Bitcoin On-Chain Analytics (2017-2026)
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.14-blue.svg)](https://python.org)
 [![ClickHouse](https://img.shields.io/badge/ClickHouse-26.4-yellow.svg)](https://clickhouse.com)
 [![LightGBM](https://img.shields.io/badge/LightGBM-4.6-green.svg)](https://lightgbm.readthedocs.io)
 [![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
@@ -33,6 +33,8 @@ Layer 2 (capa2_utxo_parquet): Normalized UTXO events. 7.08 billion create/spend 
 Layer 3 (capa3_block_metrics): Pre-computed fees = coinbase outputs minus block subsidy. 301,789 BTC total fees identified.
 
 Layer 4 (capa4_binance): BTC/USDT from Binance API. 4.58M 1m candles, 3,194 daily candles.
+
+Note: Capa 7 total supply (20.19M BTC) exceeds theoretical subsidy (20.05M BTC) by ~0.71% due to accumulated transaction fees. This is expected behavior.
 
 Stack: Bitcoin Core RPC + Binance API to Python ETL to Parquet (zstd) to ClickHouse File Engine to JupyterLab (pandas, matplotlib). State JSON files for pause/resume. Menu-driven ETL (1=reset, 2=continue, 3=rollback). 250-unit batches. Zero duplication.
 
@@ -154,7 +156,7 @@ Complete balance calculation for all 56.4M Bitcoin addresses. 150,775 addresses 
 
 ## Repository Structure
 
-btc-etl/ contains btc-rag/ with FastAPI server, etl/ with 8 ETL scripts, notebooks/ with 7 Jupyter notebooks and images/ with 33 PNGs, bot/ with 6 Python files and README, models/ with trained LightGBM files (gitignored), parquet/ with 4 capa directories (gitignored), state JSON files (gitignored), logs/ (gitignored), venvetl/ and venvquant/ virtual environments, README.md, and LICENSE.
+btc-etl/ contains btc-rag/ with FastAPI server, etl/ with 8 ETL scripts, notebooks/ with 7 Jupyter notebooks and images/ with 27 PNGs, bot/ with 6 Python files and README, models/ with trained LightGBM files (gitignored), parquet/ with 4 capa directories (gitignored), state JSON files (gitignored), logs/ (gitignored), venvetl/ and venvquant/ virtual environments, README.md, and LICENSE.
 
 ## Quick Start
 
