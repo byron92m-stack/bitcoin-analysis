@@ -1,20 +1,18 @@
 """
-Phase 7 - Live Trading Bot v5 (5m) + Persistent Reconnect
+Phase 7 - Live Trading Bot v5 (5m) — REST API
+Sin WebSocket. Sin desconexiones. Simple y robusto.
 """
-import os, sys, json, time, joblib, glob, csv
-import pandas as pd
-import numpy as np
-import clickhouse_connect
+import os, sys, time, joblib, glob, csv, warnings
+warnings.filterwarnings('ignore')
+import pandas as pd, numpy as np
+import clickhouse_connect, requests
 from datetime import datetime, timezone
 from pathlib import Path
-from websocket import create_connection, WebSocketConnectionClosedException, WebSocketTimeoutException
 
 sys.path.insert(0, os.path.dirname(__file__))
 from config import FEATURES, MIN_CONFIDENCE
 
 SIGNALS_FILE = '/media/SSD4T/btc-etl/bot/logs/live_signals.csv'
-MAX_RECONNECT_ATTEMPTS = 50  # Reintentar 50 veces antes de rendirse
-RECONNECT_DELAY = 10         # Segundos entre reintentos
 
 def load_latest_model():
     model_dir = '/media/SSD4T/btc-etl/models'
@@ -23,13 +21,37 @@ def load_latest_model():
     print(f"Model: {os.path.basename(models[-1])}")
     return joblib.load(models[-1])
 
-def load_historical_candles():
-    client = clickhouse_connect.get_client(host='localhost', port=8123)
-    df = client.query_df('''SELECT open_time, open, high, low, close, volume, quote_volume, trades FROM btc_1m WHERE open_time >= now() - INTERVAL 2 DAY ORDER BY open_time''')
-    df['bucket'] = df['open_time'].dt.floor('5min')
-    df_5m = df.groupby('bucket').agg(open=('open','first'), high=('high','max'), low=('low','min'), close=('close','last'), volume=('volume','sum'), quote_volume=('quote_volume','sum'), trades=('trades','sum')).reset_index()
-    df_5m.rename(columns={'bucket': 'open_time'}, inplace=True)
-    return df_5m.tail(200).to_dict('records')
+def fetch_last_200_candles():
+    """Obtiene últimas 200 velas 5m de Binance REST API (gratis, sin key)."""
+    url = "https://api.binance.com/api/v3/klines"
+    candles = []
+    end_time = int(time.time() * 1000)
+    
+    for _ in range(3):
+        params = {"symbol": "BTCUSDT", "interval": "5m", "limit": 200, "endTime": end_time}
+        try:
+            resp = requests.get(url, params=params, timeout=10)
+            data = resp.json()
+            if not data or not isinstance(data, list): break
+            
+            batch = []
+            for k in data:
+                batch.append({
+                    'open_time': pd.Timestamp(k[0], unit='ms'),
+                    'open': float(k[1]), 'high': float(k[2]),
+                    'low': float(k[3]), 'close': float(k[4]),
+                    'volume': float(k[5]),
+                    'quote_volume': float(k[7]), 'trades': int(k[8])
+                })
+            candles = batch + candles
+            end_time = int(data[0][0]) - 1
+            if len(candles) >= 200: break
+        except Exception as e:
+            print(f"  Fetch error: {e}")
+            time.sleep(5)
+    
+    candles = candles[-200:]
+    return candles
 
 def build_live_features(df_5m, fees_zscore):
     df = df_5m.copy()
@@ -91,85 +113,66 @@ def log_signal(ts, price, signal, conf, z, rsi):
     with open(SIGNALS_FILE, 'a', newline='') as f:
         csv.writer(f).writerow([ts, price, signal, conf, z, rsi])
 
-def connect_ws():
-    """Reintenta conexión hasta 50 veces con backoff."""
-    for attempt in range(1, MAX_RECONNECT_ATTEMPTS + 1):
-        try:
-            ws = create_connection("wss://stream.binance.com:9443/ws/btcusdt@kline_5m", timeout=30)
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Connected")
-            return ws
-        except Exception as e:
-            wait = min(RECONNECT_DELAY * attempt, 120)  # Max 2 minutos
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Connection attempt {attempt}/{MAX_RECONNECT_ATTEMPTS} failed: {e}. Retrying in {wait}s...")
-            time.sleep(wait)
-    print("Max reconnect attempts reached. Exiting.")
-    sys.exit(1)
+def wait_until_next_5min():
+    """Espera hasta el próximo múltiplo de 5 minutos."""
+    now = datetime.now()
+    next_minute = (now.minute // 5 + 1) * 5
+    if next_minute >= 60:
+        next_minute = 0
+        next_hour = now.hour + 1
+        if next_hour >= 24:
+            next_hour = 0
+        next_5 = now.replace(hour=next_hour, minute=next_minute, second=5, microsecond=0)
+    else:
+        next_5 = now.replace(minute=next_minute, second=5, microsecond=0)
+    wait = (next_5 - now).total_seconds()
+    if wait > 0:
+        time.sleep(wait)
 
 def main():
     print("=" * 60)
-    print("Phase 7 - Live Trading Bot v5 (5m)")
+    print("Phase 7 - Live Trading Bot v5 (5m) — REST API")
     print("=" * 60)
     
     init_signals_log()
     model = load_latest_model()
     
-    print("\nLoading historical candles...")
-    candles = load_historical_candles()
-    print(f"Preloaded {len(candles)} candles. Last: {candles[-1]['open_time']}")
-    
-    ws = connect_ws()
-    print(f"{'Time':<8} {'Price':<12} {'Signal':<8} {'Conf':<8} {'Z':<8} {'RSI':<8}")
+    print(f"\n{'Time':<8} {'Price':<12} {'Signal':<8} {'Conf':<8} {'Z':<8} {'RSI':<8}")
     print("-" * 65)
-    
-    reconnect_count = 0
     
     while True:
         try:
-            data = json.loads(ws.recv())
-            kline = data['k']
-            reconnect_count = 0  # Reset on successful receive
+            wait_until_next_5min()
+            candles = fetch_last_200_candles()
+            if not candles:
+                print(f"[{datetime.now().strftime('%H:%M:%S')}] No candles fetched. Retrying...")
+                time.sleep(30)
+                continue
             
-            if kline['x']:
-                candle = {'open_time': pd.Timestamp(kline['t'], unit='ms'), 'open': float(kline['o']), 'high': float(kline['h']), 'low': float(kline['l']), 'close': float(kline['c']), 'volume': float(kline['v']), 'quote_volume': float(kline['q']), 'trades': int(kline['n'])}
-                candles.append(candle)
-                if len(candles) > 300: candles = candles[-300:]
+            df_5m = pd.DataFrame(candles)
+            fees_z = get_fees_zscore()
+            df_f = build_live_features(df_5m, fees_z)
+            last_row = df_f.iloc[-1:][FEATURES]
+            
+            if not last_row.isna().any().any():
+                prob = model.predict_proba(last_row.values)[0, 1]
+                pred = 1 if prob >= MIN_CONFIDENCE else 0
+                time_str = datetime.now().strftime("%H:%M:%S")
+                price = candles[-1]['close']
+                signal = "LONG" if pred == 1 else "WAIT"
+                conf = f"{prob*100:.1f}%"
+                z_str = f"{fees_z:.2f}"
+                rsi_str = f"{last_row['rsi_14'].values[0]:.0f}"
                 
-                if len(candles) >= 200:
-                    df_5m = pd.DataFrame(candles)
-                    fees_z = get_fees_zscore()
-                    df_f = build_live_features(df_5m, fees_z)
-                    last_row = df_f.iloc[-1:][FEATURES]
-                    
-                    if not last_row.isna().any().any():
-                        prob = model.predict_proba(last_row.values)[0, 1]
-                        pred = 1 if prob >= MIN_CONFIDENCE else 0
-                        time_str = datetime.now().strftime("%H:%M:%S")
-                        price = kline['c']
-                        signal = "LONG" if pred == 1 else "WAIT"
-                        conf = f"{prob*100:.1f}%"
-                        z_str = f"{fees_z:.2f}"
-                        rsi_str = f"{last_row['rsi_14'].values[0]:.0f}"
-                        
-                        print(f"{time_str:<8} ${float(price):<11,.0f} {signal:<8} {conf:<8} {z_str:<8} {rsi_str:<8}")
-                        log_signal(time_str, price, signal, prob, fees_z, last_row['rsi_14'].values[0])
-        
-        except (WebSocketConnectionClosedException, WebSocketTimeoutException, ConnectionResetError, BrokenPipeError, OSError, TimeoutError) as e:
-            reconnect_count += 1
-            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Disconnected ({type(e).__name__}). Reconnecting (attempt {reconnect_count})...")
-            try: ws.close()
-            except: pass
-            ws = connect_ws()
-            print(f"{'Time':<8} {'Price':<12} {'Signal':<8} {'Conf':<8} {'Z':<8} {'RSI':<8}")
-            print("-" * 65)
+                print(f"{time_str:<8} ${price:<11,.0f} {signal:<8} {conf:<8} {z_str:<8} {rsi_str:<8}")
+                log_signal(time_str, price, signal, prob, fees_z, last_row['rsi_14'].values[0])
         
         except KeyboardInterrupt:
-            print(f"\nBot stopped. Signals log: {SIGNALS_FILE}")
-            ws.close()
+            print(f"\nBot stopped. Signals: {SIGNALS_FILE}")
             break
-        
         except Exception as e:
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Error: {e}")
-            time.sleep(1)
+            time.sleep(30)
 
 if __name__ == "__main__":
     main()

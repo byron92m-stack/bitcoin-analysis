@@ -257,6 +257,7 @@ def process_block(blk: Dict[str, Any]):
                 "vout": safe_int(vout.get("n")),
                 "value_sats": btc_to_sats(vout.get("value")),
                 "script_type": spk.get("type"),
+                "script_hex": spk.get("hex"),
             })
 
     return blocks, txs, inputs, outputs
