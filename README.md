@@ -36,6 +36,13 @@ Layer 4 (capa4_binance): BTC/USDT from Binance API. 4.58M 1m candles, 3,194 dail
 
 Note: Capa 7 total supply (20.19M BTC) exceeds theoretical subsidy (20.05M BTC) by ~0.71% due to accumulated transaction fees. This is expected behavior.
 
+Automated weekly pipeline (cron_weekly_update.sh) runs every Sunday 10PM:
+opens Bitcoin Core, syncs 10 min, extracts data, closes BTC Core, runs Capa 1→8,
+refreshes all 10 ClickHouse tables, inserts snapshot into whale_snapshots,
+and detects accumulation/distribution trends.
+
+ClickHouse tables: 11 (10 File(Parquet) + 1 MergeTree for whale_snapshots)
+
 Stack: Bitcoin Core RPC + Binance API to Python ETL to Parquet (zstd) to ClickHouse File Engine to JupyterLab (pandas, matplotlib). State JSON files for pause/resume. Menu-driven ETL (1=reset, 2=continue, 3=rollback). 250-unit batches. Zero duplication.
 
 ## Phase 1 — UTXO Analysis
@@ -145,7 +152,7 @@ Example: "What was the day with the highest fees in 2017?" → "December 22, 201
 
 Notebook: notebooks/10_whale_tracker.ipynb (uses DuckDB for offline analysis, unlike notebooks 01-06 which use ClickHouse)
 
-Complete balance calculation for all 56.4M Bitcoin addresses. 150,775 addresses hold more than 10 BTC, controlling 83.4% of supply. 20,109 whales (≥100 BTC) hold 62.2%. Satoshi-era P2PK vouchers: 29,996 unspent outputs totaling 1,504,568 BTC (9.0%), median age 17.7 years. Bech32 dominates with 47.0% of >10 BTC supply. 84.5% of whale BTC actively managed (last moved 2023-2026). Exchange cold wallets (Binance, Bitfinex, Huobi) dominate Top 20.
+Complete balance calculation for all 285.7M Bitcoin addresses. 150,775 addresses hold more than 10 BTC, controlling 83.4% of supply. 20,109 whales (≥100 BTC) hold 62.2%. Satoshi-era P2PK vouchers: 29,996 unspent outputs totaling 1,504,568 BTC (9.0%), median age 17.7 years. Bech32 dominates with 47.0% of >10 BTC supply. 84.5% of whale BTC actively managed (last moved 2023-2026). Exchange cold wallets (Binance, Bitfinex, Huobi) dominate Top 20.
 
 ![Cohorts BTC](notebooks/images/eda_cohorts.png)
 ![Types Temporal](notebooks/images/eda_types_temporal.png)
@@ -154,9 +161,15 @@ Complete balance calculation for all 56.4M Bitcoin addresses. 150,775 addresses 
 ![Scatter Age](notebooks/images/eda_scatter_age.png)
 ![Heatmap Type Cohort](notebooks/images/eda_heatmap_type_cohort.png)
 
+### Weekly Automation
+- **Script:** `etl/cron_weekly_update.sh` — runs every Sunday 10:00 PM via crontab
+- **Snapshots:** `whale_snapshots` table in ClickHouse tracks every address >10 BTC week-over-week
+- **Detection:** Automatic identification of new whales, exits, large movements (>10%), and accumulation/distribution trends over 4-week rolling windows
+- **Logs:** `logs/weekly_update_YYYY-MM-DD.log` with full comparison output
+
 ## Repository Structure
 
-btc-etl/ contains btc-rag/ with FastAPI server, etl/ with 8 ETL scripts, notebooks/ with 7 Jupyter notebooks and images/ with 27 PNGs, bot/ with 6 Python files and README, models/ with trained LightGBM files (gitignored), parquet/ with 4 capa directories (gitignored), state JSON files (gitignored), logs/ (gitignored), venvetl/ and venvquant/ virtual environments, README.md, and LICENSE.
+btc-etl/ contains btc-rag/ with FastAPI server, etl/ with 8 Python ETL scripts + 1 cron automation script, notebooks/ with 7 Jupyter notebooks and images/ with 27 PNGs, bot/ with 6 Python files and README, models/ with trained LightGBM files (gitignored), parquet/ with 5 capa directories + capa6/7/8 files (gitignored), state JSON files (gitignored), logs/ (gitignored), venvetl/ and venvquant/ virtual environments, README.md, and LICENSE.
 
 ## Quick Start
 

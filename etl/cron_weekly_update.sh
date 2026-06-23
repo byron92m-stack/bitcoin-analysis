@@ -9,8 +9,10 @@ VENV="$PROJECT/venvetl/bin/activate"
 LOG="$PROJECT/logs/weekly_update_$(date +%Y-%m-%d).log"
 BTCORE="bitcoin-qt"
 
+mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
 echo "  🐋 WEEKLY UPDATE — $(date)" | tee -a "$LOG"
+mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
 
 # 1. ABRIR BITCOIN CORE
@@ -81,8 +83,8 @@ ln -sf "$PROJECT/parquet/capa8_balance_gt10.parquet" /media/SSD4T/clickhouse/use
 
 # Refrescar TODAS las tablas que leen de Parquet
 for table in blocks txs inputs outputs utxo_events block_metrics btc_1d btc_1m capa7_balance capa8_balance_gt10; do
-    curl -s "http://localhost:8123" --data "DETACH TABLE ${table}" > /dev/null 2>&1
-    curl -s "http://localhost:8123" --data "ATTACH TABLE ${table}" > /dev/null 2>&1
+    curl -s --fail "http://localhost:8123" --data "DETACH TABLE ${table}" > /dev/null 2>&1 || { echo "❌ ClickHouse no responde al DETACH de ${table}" | tee -a "$LOG"; exit 1; }
+    curl -s --fail "http://localhost:8123" --data "ATTACH TABLE ${table}" > /dev/null 2>&1 || { echo "❌ ClickHouse no responde al ATTACH de ${table}" | tee -a "$LOG"; exit 1; }
 done
 echo "✅ ClickHouse: 10 tablas refrescadas" | tee -a "$LOG"
 
@@ -114,7 +116,9 @@ else:
 PYEOF
 
 echo "" | tee -a "$LOG"
+mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
 echo "  ✅ WEEKLY UPDATE COMPLETADO — $(date)" | tee -a "$LOG"
 echo "  Log: $LOG" | tee -a "$LOG"
+mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
