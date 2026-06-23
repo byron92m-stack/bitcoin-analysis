@@ -69,18 +69,22 @@ echo "" | tee -a "$LOG"
 echo "=== CAPA 8: >10 BTC ===" | tee -a "$LOG"
 python etl/capa8_balance_gt10.py | tail -5 | tee -a "$LOG"
 
-# 6. ACTUALIZAR CLICKHOUSE
+# 6. ACTUALIZAR CLICKHOUSE (TODAS las tablas File(Parquet))
 echo "" | tee -a "$LOG"
-echo "=== ClickHouse ===" | tee -a "$LOG"
+echo "=== ClickHouse: Refrescando todas las tablas ===" | tee -a "$LOG"
 TODAY=$(date +%F)
+
+# Actualizar symlinks para capa7 y capa8
 ln -sf "$PROJECT/parquet/capa7_balance.parquet" /media/SSD4T/clickhouse/user_files/capa7/capa7_balance.parquet
 cp "$PROJECT/parquet/capa8_balance_gt10_${TODAY}.parquet" "$PROJECT/parquet/capa8_balance_gt10.parquet"
 ln -sf "$PROJECT/parquet/capa8_balance_gt10.parquet" /media/SSD4T/clickhouse/user_files/capa8/capa8_balance_gt10.parquet
-curl -s 'http://localhost:8123' --data "DETACH TABLE capa7_balance" > /dev/null 2>&1
-curl -s 'http://localhost:8123' --data "ATTACH TABLE capa7_balance" > /dev/null 2>&1
-curl -s 'http://localhost:8123' --data "DETACH TABLE capa8_balance_gt10" > /dev/null 2>&1
-curl -s 'http://localhost:8123' --data "ATTACH TABLE capa8_balance_gt10" > /dev/null 2>&1
-echo "✅ ClickHouse actualizado" | tee -a "$LOG"
+
+# Refrescar TODAS las tablas que leen de Parquet
+for table in blocks txs inputs outputs utxo_events block_metrics btc_1d btc_1m capa7_balance capa8_balance_gt10; do
+    curl -s "http://localhost:8123" --data "DETACH TABLE ${table}" > /dev/null 2>&1
+    curl -s "http://localhost:8123" --data "ATTACH TABLE ${table}" > /dev/null 2>&1
+done
+echo "✅ ClickHouse: 10 tablas refrescadas" | tee -a "$LOG"
 
 # 7. COMPARACIÓN SEMANAL
 echo "" | tee -a "$LOG"
