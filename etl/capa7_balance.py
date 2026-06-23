@@ -17,6 +17,16 @@ CREATES_SORT  = os.path.join(PARQUET, "capa6_creates_sorted.parquet")
 SPENDS_SORT   = os.path.join(PARQUET, "capa6_spends_sorted.parquet")
 C7_OUTPUT     = os.path.join(PARQUET, "capa7_balance.parquet")
 
+# Siempre borrar sorted files y output anterior
+for f in [CREATES_SORT, SPENDS_SORT, C7_OUTPUT]:
+    if os.path.exists(f):
+        os.remove(f)
+        print(f"🗑️  Borrado: {os.path.basename(f)}")
+batch_dir = os.path.join(PARQUET, "capa7_batches")
+if os.path.exists(batch_dir):
+    import shutil
+    shutil.rmtree(batch_dir)
+
 os.makedirs(TMPDIR, exist_ok=True)
 
 MEMORY = "16GB"
@@ -59,7 +69,7 @@ for label, src, dst, cols in [
 # PASO 2: Anti-join por batches (NOT EXISTS)
 # ═══════════════════════════════════════════════════════════════
 
-BATCH_DIR = os.path.join(PARQUET, "capa7_batches")
+BATCH_DIR = batch_dir
 os.makedirs(BATCH_DIR, exist_ok=True)
 
 for f in os.listdir(BATCH_DIR):

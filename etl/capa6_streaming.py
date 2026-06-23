@@ -7,6 +7,12 @@ CAPA5_DIR = os.path.join(PROJECT_ROOT, "parquet", "capa5_filtered")
 CREATES_FILE = os.path.join(PROJECT_ROOT, "parquet", "capa6_creates.parquet")
 SPENDS_FILE = os.path.join(PROJECT_ROOT, "parquet", "capa6_spends.parquet")
 
+# Siempre borrar archivos anteriores (reset automático)
+for f in [CREATES_FILE, SPENDS_FILE]:
+    if os.path.exists(f):
+        os.remove(f)
+        print(f"🗑️  Borrado: {os.path.basename(f)}")
+
 all_files = sorted(glob.glob(f"{CAPA5_DIR}/filtered_*.parquet"))
 print(f"Archivos: {len(all_files)}")
 
