@@ -12,7 +12,6 @@ BTCORE="bitcoin-qt"
 mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
 echo "  🐋 WEEKLY UPDATE — $(date)" | tee -a "$LOG"
-mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
 
 # 1. ABRIR BITCOIN CORE
@@ -88,6 +87,90 @@ for table in blocks txs inputs outputs utxo_events block_metrics btc_1d btc_1m c
 done
 echo "✅ ClickHouse: 10 tablas refrescadas" | tee -a "$LOG"
 
+# 6.5 INSERTAR SNAPSHOT SEMANAL EN CLICKHOUSE
+echo "" | tee -a "$LOG"
+echo "=== 🐋 Insertando snapshot en whale_snapshots ===" | tee -a "$LOG"
+curl -s --fail "http://localhost:8123" --data "
+INSERT INTO whale_snapshots
+SELECT toDate('${TODAY}') as week, address, btc
+FROM capa8_balance_gt10
+WHERE btc >= 10
+" && echo "✅ Snapshot insertado: ${TODAY}" | tee -a "$LOG" || { echo "❌ Fallo al insertar snapshot" | tee -a "$LOG"; exit 1; }
+
+# 6.6 DETECCIÓN DE ACUMULACIÓN/VENTA (últimas 4 semanas)
+echo "" | tee -a "$LOG"
+echo "=== 📈 Detección de acumulación/venta (4 semanas) ===" | tee -a "$LOG"
+curl -s "http://localhost:8123" --data "
+SELECT 
+    CASE 
+        WHEN up_weeks >= 3 AND total_delta > 100 THEN 'ACUMULANDO FUERTE'
+        WHEN up_weeks >= 2 AND total_delta > 0 THEN 'Acumulando'
+        WHEN down_weeks >= 3 AND total_delta < -100 THEN 'VENDIENDO FUERTE'
+        WHEN down_weeks >= 2 AND total_delta < 0 THEN 'Vendiendo'
+        ELSE 'Estable'
+    END as trend,
+    COUNT(*) as whales,
+    SUM(total_delta) as total_btc_change,
+    ROUND(AVG(avg_btc)) as avg_balance
+FROM (
+    SELECT 
+        address,
+        COUNT(*) as weeks_present,
+        SUM(CASE WHEN delta > 0 THEN 1 ELSE 0 END) as up_weeks,
+        SUM(CASE WHEN delta < 0 THEN 1 ELSE 0 END) as down_weeks,
+        SUM(delta) as total_delta,
+        AVG(btc) as avg_btc
+    FROM (
+        SELECT address, week, btc,
+               btc - LAG(btc) OVER (PARTITION BY address ORDER BY week) as delta
+        FROM whale_snapshots
+        WHERE week >= toDate('${TODAY}') - INTERVAL 28 DAY
+    )
+    WHERE delta IS NOT NULL
+    GROUP BY address
+    HAVING weeks_present >= 3
+)
+GROUP BY trend
+ORDER BY total_btc_change DESC
+FORMAT PrettyCompact
+" | tee -a "$LOG"
+
+# Top 5 acumulando
+echo "" | tee -a "$LOG"
+echo "   Top 5 ACUMULANDO:" | tee -a "$LOG"
+curl -s --fail "http://localhost:8123" --data "
+SELECT address, SUM(delta) as total_added, ROUND(AVG(btc)) as avg_balance, COUNT(*) as weeks
+FROM (
+    SELECT address, week, btc,
+           btc - LAG(btc) OVER (PARTITION BY address ORDER BY week) as delta
+    FROM whale_snapshots
+    WHERE week >= toDate('${TODAY}') - INTERVAL 28 DAY
+)
+WHERE delta > 0
+GROUP BY address
+HAVING COUNT(*) >= 3
+ORDER BY total_added DESC LIMIT 5
+FORMAT PrettyCompact
+" | tee -a "$LOG"
+
+# Top 5 vendiendo
+echo "" | tee -a "$LOG"
+echo "   Top 5 VENDIENDO:" | tee -a "$LOG"
+curl -s --fail "http://localhost:8123" --data "
+SELECT address, SUM(delta) as total_sold, ROUND(AVG(btc)) as avg_balance, COUNT(*) as weeks
+FROM (
+    SELECT address, week, btc,
+           btc - LAG(btc) OVER (PARTITION BY address ORDER BY week) as delta
+    FROM whale_snapshots
+    WHERE week >= toDate('${TODAY}') - INTERVAL 28 DAY
+)
+WHERE delta < 0
+GROUP BY address
+HAVING COUNT(*) >= 3
+ORDER BY total_sold ASC LIMIT 5
+FORMAT PrettyCompact
+" | tee -a "$LOG"
+
 # 7. COMPARACIÓN SEMANAL
 echo "" | tee -a "$LOG"
 echo "=== 📊 Comparación semanal ===" | tee -a "$LOG"
@@ -116,9 +199,7 @@ else:
 PYEOF
 
 echo "" | tee -a "$LOG"
-mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
 echo "  ✅ WEEKLY UPDATE COMPLETADO — $(date)" | tee -a "$LOG"
 echo "  Log: $LOG" | tee -a "$LOG"
-mkdir -p "$(dirname "$LOG")"
 echo "========================================" | tee -a "$LOG"
